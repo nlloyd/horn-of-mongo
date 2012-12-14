@@ -2,13 +2,41 @@
     xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
+    <parent>
+        <groupId>org.sonatype.oss</groupId>
+        <artifactId>oss-parent</artifactId>
+        <version>7</version>
+    </parent>
+
     <groupId>org.github.nlloyd</groupId>
     <artifactId>horn-of-mongo</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>horn-of-mongo</name>
-    <url>https://github.com/nlloyd/horn-of-mongo</url>
+
+    <scm>
+        <connection>scm:git:git://github.com/nlloyd/horn-of-mongo.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/nlloyd/horn-of-mongo.git</developerConnection>
+        <url>https://github.com/nlloyd/horn-of-mongo</url>
+    </scm>
+
+    <developers>
+        <developer>
+            <id>nlloyd</id>
+            <name>Nick Lloyd</name>
+            <email>nlloyd@gmail.com</email>
+            <timezone>-5</timezone>
+        </developer>
+    </developers>
+
+    <licenses>
+        <license>
+            <name>MIT License</name>
+            <url>https://github.com/nlloyd/horn-of-mongo/blob/master/README.md</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -32,4 +60,15 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+    <build>
+        <resources>
+            <resource>
+                <directory>src/main/javascript</directory>
+                <includes>
+                    <include>*.js</include>
+                </includes>
+            </resource>
+        </resources>
+    </build>
 </project>
