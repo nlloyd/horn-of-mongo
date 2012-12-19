@@ -21,9 +21,24 @@
  */
 package org.github.nlloyd.hornofmongo.scope;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.Reader;
+
+import org.apache.log4j.Logger;
+import org.mozilla.javascript.Context;
+import org.mozilla.javascript.ast.Scope;
 import org.mozilla.javascript.tools.shell.Global;
 
 /**
+ * The MongoDB-specific {@link Scope} implementation. This extends
+ * {@link Global} to add MongoDB shell JavaScript global functions objects, and
+ * variables.
+ * 
+ * Meant to emulate engine.cpp (and the more specific engine_*.cpp
+ * implementations) in the official mongodb source.
+ * 
  * @author nlloyd
  * 
  */
@@ -33,5 +48,46 @@ public class MongoScope extends Global {
 	 * 
 	 */
 	private static final long serialVersionUID = 4650743395507077775L;
+	
+	private static final Logger logger = Logger.getLogger(MongoScope.class);
+	
+	private static String[] mongoApiFiles = {
+		"mongodb/utils.js",
+		"mongodb/utils_sh.js",
+		"mongodb/db.js",
+		"mongodb/mongo.js",
+		"mongodb/mr.js",
+		"mongodb/query.js",
+		"mongodb/collection.js"
+	};
 
+	public MongoScope() {
+		super();
+	}
+
+	public MongoScope(Context context) {
+		super(context);
+		initMongoJS(context);
+	}
+
+	protected void initMongoJS(Context context) {
+		if(!isInitialized()) {
+			super.init(context);
+			for(String jsSetupFile : mongoApiFiles) {
+				try {
+					context.evaluateReader(this, loadFromClasspath(jsSetupFile), 
+							"setup", 0, null);
+				} catch (IOException e) {
+					logger.error("Caught IOException attempting to load from classpath: " + jsSetupFile, e);
+				}
+			}
+		}
+	}
+
+	protected Reader loadFromClasspath(String filePath) {
+		Reader reader = null;
+		reader = new BufferedReader(new InputStreamReader(
+				ClassLoader.getSystemResourceAsStream(filePath)));
+		return reader;
+	}
 }

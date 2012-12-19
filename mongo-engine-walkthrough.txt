@@ -1,0 +1,24 @@
+mongo::ScriptEngine::setup() --> just creates a global SMEngine() instance for retrieval.  Initializes SpiderMonkey but no mongo APIs
+SMEngine() --> inherits ScriptEngine()...
+    calls SMScope()
+        NOTE: scope inits and wraps its own context
+    passes SMScope instance to mongo::shellUtils::initScope()
+    mongo::shellUtils::initScope()...
+        scope.externalSetup()
+            ...
+            scope.initMongoJS()
+                JS engine init classes
+                scope.execCoreFiles()
+                    where all those *.js files are loaded up
+            ...
+        mongo::shellUtils::installShellUtils(scope)
+        scope.execSetup(JSFiles::servers)
+            loads up servers.js
+        if _dbConnect:
+            scope.exec(_dbConnect)
+            if _dbAuth:
+                mongo::shellUtils::installGlobalUtils(scope)
+                    sets up the functions hex_md5, version, sleep
+                    installBenchmarkSystem(scope)
+                scope.exec(_dbAuth)
+        ... some other stuff that may not matter right now
