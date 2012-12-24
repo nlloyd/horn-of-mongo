@@ -21,20 +21,40 @@
  */
 package org.github.nlloyd.hornofmongo;
 
+import java.lang.reflect.InvocationTargetException;
+
+import org.apache.commons.lang3.StringUtils;
 import org.github.nlloyd.hornofmongo.scope.MongoScope;
+import org.mozilla.javascript.Context;
 
 /**
- * Runtime class for MongoDB that wraps a Rhino {@link Context}
- * and {@link MongoScope} instance for simple script execution.
+ * Runtime class for MongoDB that wraps a {@link Context}
+ * and {@link MongoScope} instance for script execution.
+ * 
+ * Currently single threaded due to the MongoScope implementation.
  * 
  * @author nlloyd
  *
  */
 public class MongoRuntime {
 
-	private MongoScope mongoScope = new MongoScope();
+	private MongoScope scope;
+	private Context context;
 	
-	public MongoRuntime() {
-		
+	public MongoRuntime() throws IllegalAccessException, InstantiationException, InvocationTargetException {
+		context = Context.enter();
+		scope = new MongoScope(context);
+	}
+	
+	public Object exec(final String script) {
+		return exec(script, null);
+	}
+	
+	public Object exec(final String script, String scriptName) {
+		if(StringUtils.isEmpty(scriptName)) {
+			scriptName = "(anon)";
+		}
+		Object result = context.evaluateString(scope, script, scriptName, 1, null);
+		return result;
 	}
 }

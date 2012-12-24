@@ -68,6 +68,9 @@ public class App
         cx.evaluateString(global, 
         		"var test = new SandboxJS(); test.wtf(); test.wtf; test.notafunc();",
         		"noSuchMethodTester.js", 1, null);
+        cx.evaluateString(global, 
+        		"test.prop; test.prop = 1; print(test.prop);",
+        		"noSuchMethodTester2.js", 1, null);
         Context.exit();
     }
 }

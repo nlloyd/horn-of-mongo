@@ -35,7 +35,7 @@ public class SandboxJS extends ScriptableObject {
 
 	@Override
 	public String getClassName() {
-		return "SandboxJS";
+		return this.getClass().getSimpleName();
 	}
 	
 	@JSFunction
@@ -43,4 +43,13 @@ public class SandboxJS extends ScriptableObject {
             Object[] args, Function funObj) {
 		System.out.printf("call to %s(%s)\n", args[0], args[1]);
 	}
+
+	@Override
+	public Object get(String name, Scriptable start) {
+		if(start == this) {
+			System.out.printf("SandboxJS has %s: %b\n", name, this.has(name, start));
+		}
+		return super.get(name, start);
+	}
+	
 }

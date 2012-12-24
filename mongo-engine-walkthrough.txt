@@ -9,7 +9,7 @@ newScope() called from  global SMEngine() from above
         scope.externalSetup()
             ...
             scope.initMongoJS()
-                JS engine init classes
+                JS engine init classes (mongodb classes that provide the actual logic)
                 scope.execCoreFiles()
                     where all those *.js files are loaded up
             ...
