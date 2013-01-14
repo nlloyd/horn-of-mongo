@@ -21,10 +21,15 @@
  */
 package org.github.nlloyd.sandbox;
 
-import java.lang.reflect.InvocationTargetException;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.Reader;
 
 import org.mozilla.javascript.Context;
-import org.mozilla.javascript.ScriptableObject;
+import org.mozilla.javascript.ContextAction;
+import org.mozilla.javascript.ContextFactory;
+import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.tools.shell.Global;
 
 /**
@@ -51,26 +56,114 @@ public class App
 //		
 //	}
 	
-    public static void main( String[] args ) throws IllegalAccessException, InstantiationException, InvocationTargetException
+	private static Scriptable global;
+	
+    public static void main( String[] args ) throws Exception
     {
-        System.out.println( "Hello World!" );
+////        ContextFactory cxf = new ContextFactory();
+//        Context cx = Context.enter();
+//        Global global = new Global(cx);
+////        global.init(cxf);
+////        Context jsCx = cxf.enterContext();
+//        cx.evaluateString(global, "var hullo = 'Hello World!'", 
+//        		"helloWorld.js", 1, null);
+//        cx.evaluateString(global, "print(hullo)", 
+//        		"helloWorld.js", 2, null);
+//        ScriptableObject.defineClass(global, SandboxJS.class);
+//        cx.evaluateString(global, 
+//        		"var test = new SandboxJS(); test.wtf(); test.wtf; test.notafunc();",
+//        		"noSuchMethodTester.js", 1, null);
+//        cx.evaluateString(global, 
+//        		"test.prop; test.prop = 1; print(test.prop);",
+//        		"noSuchMethodTester2.js", 1, null);
+//
+//        cx.evaluateReader(global, loadFromClasspath("mongodb/db.js"), 
+//				"setup", 0, null);
+//        
+//        Object db = global.get("DB", global);
+//        Function dbc = (Function)db;
+//        Scriptable result = dbc.construct(cx, global, new Object[]{"dummyMongo", "dummy"});
+//        System.out.println(result instanceof IdScriptableObject);
+//        String report = "new DB(mongo,name) = " + Context.toString(result);
+//        System.out.println(report);
+//        global.put("newDB", global, result);
         
-//        ContextFactory cxf = new ContextFactory();
-        Context cx = Context.enter();
-        Global global = new Global(cx);
-//        global.init(cxf);
-//        Context jsCx = cxf.enterContext();
-        cx.evaluateString(global, "var hullo = 'Hello World!'", 
-        		"helloWorld.js", 1, null);
-        cx.evaluateString(global, "print(hullo)", 
-        		"helloWorld.js", 2, null);
-        ScriptableObject.defineClass(global, SandboxJS.class);
-        cx.evaluateString(global, 
-        		"var test = new SandboxJS(); test.wtf(); test.wtf; test.notafunc();",
-        		"noSuchMethodTester.js", 1, null);
-        cx.evaluateString(global, 
-        		"test.prop; test.prop = 1; print(test.prop);",
-        		"noSuchMethodTester2.js", 1, null);
-        Context.exit();
+//        cx.evaluateString(global,
+//        		"print(newDB.getName()); print('***************');",
+//        		"java-test", 0, null);
+        
+//        Context.exit();
+
+        ContextFactory.getGlobal().call(new ContextAction() {
+
+			public Object run(Context cx) {
+				global = new Global(cx);
+				Object result = null;
+				try {
+					result = cx.evaluateReader(global, loadFromClasspath("mongodb/db.js"), 
+									"setup", 0, null);
+				} catch (IOException e) {
+					e.printStackTrace();
+				};
+				return result;
+			}
+        	
+        });
+        
+        Thread t1 = new Thread(new RunnableScript(global, "var t1 = new DB('db','t1Name'); print('created: '+t1.getName());"));
+        Thread t2 = new Thread(new RunnableScript(global, "var t2 = new DB('db','t2Name'); print('created: '+t2.getName());"));
+        Thread t3 = new Thread(new RunnableScript(global, "print('*****'); print(t1.getName()); print(t2.getName());"));
+        
+        t1.run();
+        t2.run();
+        t3.run();
+        t1.join();
+        t2.join();
+        t3.join();
+        
+        long start = System.nanoTime();
+        for(int i = 0; i < 10000; i++) {
+        	String result = new StringBuilder("testDB").append(".").append("testColl").toString();
+        }
+        System.out.println(System.nanoTime() - start);
+        
+        start = System.nanoTime();
+        for(int i = 0; i < 10000; i++) {
+        	String result = "testDB" + "." + "testColl";
+        }
+        System.out.println(System.nanoTime() - start);
+        
+        start = System.nanoTime();
+        for(int i = 0; i < 10000; i++) {
+        	String result = String.format("%s.%s", "testDB", "testColl");
+        }
+        System.out.println(System.nanoTime() - start);
     }
+
+	protected static Reader loadFromClasspath(String filePath) {
+		Reader reader = null;
+		reader = new BufferedReader(new InputStreamReader(
+				ClassLoader.getSystemResourceAsStream(filePath)));
+		return reader;
+	}
+	
+	protected static class RunnableScript implements Runnable, ContextAction {
+
+		Scriptable scope;
+		String script;
+		
+		public RunnableScript(Scriptable scope, String script) {
+			this.scope = scope;
+			this.script = script;
+		}
+		
+		public void run() {
+			ContextFactory.getGlobal().call(this);
+		}
+
+		public Object run(Context cx) {
+			return cx.evaluateString(scope, script, "ThreadedScript", 0, null);
+		}
+		
+	}
 }

@@ -21,12 +21,26 @@
  */
 package org.github.nlloyd.hornofmongo.adaptor;
 
+import org.github.nlloyd.hornofmongo.MongoAction;
+import org.github.nlloyd.hornofmongo.MongoRuntime;
+import org.github.nlloyd.hornofmongo.exception.MongoScopeException;
+import org.mozilla.javascript.Context;
+import org.mozilla.javascript.Function;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
+import org.mozilla.javascript.annotations.JSConstructor;
 import org.mozilla.javascript.annotations.JSGetter;
 import org.mozilla.javascript.annotations.JSSetter;
 
+import com.mongodb.DBCollection;
+
 /**
+ * DB JavaScriptable implementation to support dynamic collection creation on
+ * property access.
+ * 
+ * This class is associated with the MongoDB JavaScript API as opposed to the 
+ * MongoDB Java Driver.
+ * 
  * @author nlloyd
  *
  */
@@ -40,7 +54,9 @@ public class DB extends ScriptableObject {
 	private Mongo mongo;
 	private String name;
 	
+	@JSConstructor
 	public DB(Mongo mongo, String name) {
+		super();
 		this.mongo = mongo;
 		this.name = name;
 	}
@@ -61,22 +77,14 @@ public class DB extends ScriptableObject {
 	 */
 	@Override
 	public Object get(String name, Scriptable start) {
-		// TODO Auto-generated method stub
 		Object property = super.get(name, start);
 		if(property == ScriptableObject.NOT_FOUND) {
-			// TODO collection logic, may actually be a script eval/call
-			// TODO then set the newly created collection as a property
+			// TODO how to handle isSpecialName(name) call from sm_db.cpp... or is it even necessary?
+			// create JS API DBCollection instance as opposed to Java driver equivalent to support JS API implementation
+			property = MongoRuntime.call(new DBCollectionConstructor(mongo, this, name));
+			this.put(name, this, property);
 		}
 		return property;
-	}
-
-	/* (non-Javadoc)
-	 * @see org.mozilla.javascript.ScriptableObject#has(java.lang.String, org.mozilla.javascript.Scriptable)
-	 */
-	@Override
-	public boolean has(String name, Scriptable start) {
-		// TODO Auto-generated method stub
-		return super.has(name, start);
 	}
 
 	/**
@@ -109,8 +117,35 @@ public class DB extends ScriptableObject {
 	@JSSetter
 	public void _name(String name) {
 		this.name = name;
+		
 	}
 	
-	
+	private class DBCollectionConstructor extends MongoAction {
+
+		Mongo mongo;
+		DB db;
+		String name;
+		String fullName;
+		
+		public DBCollectionConstructor(Mongo mongo, DB db, String name) {
+			this.mongo = mongo;
+			this.db = db;
+			this.fullName = db._name() + "." + name;
+		}
+
+		public Object run(Context cx) {
+			Object dbc = mongoScope.get("DBCollection", mongoScope);
+			if((dbc != null) && (dbc instanceof Function)) {
+				Function dbcc = (Function)dbc;
+		        Scriptable newCollection = dbcc.construct(cx, mongoScope, 
+		        		new Object[]{mongo, db, name, fullName});
+		        return newCollection;
+			} else {
+				throw new MongoScopeException("MongoDB JS API function named DB not found!  " +
+						"MongoScope is either not being used or is not initialized.");
+			}
+		}
+		
+	}
 
 }
