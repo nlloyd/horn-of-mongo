@@ -3,6 +3,7 @@ package org.github.nlloyd.hornofmongo.adaptor;
 import java.net.UnknownHostException;
 
 import org.mozilla.javascript.ScriptableObject;
+import org.mozilla.javascript.Undefined;
 import org.mozilla.javascript.annotations.JSConstructor;
 import org.mozilla.javascript.annotations.JSFunction;
 
@@ -29,13 +30,16 @@ public class Mongo extends ScriptableObject {
 	@JSConstructor
 	public Mongo() throws UnknownHostException {
 		super();
-		initMongo("127.0.0.1");
+		initMongo("localhost");
 	}
 	
 	@JSConstructor
-	public Mongo(String host) throws UnknownHostException {
+	public Mongo(final Object host) throws UnknownHostException {
 		super();
-		initMongo(host);
+		if(host instanceof Undefined)
+		    initMongo("localhost");
+		else
+		    initMongo(host.toString());
 	}
 	
 	private void initMongo(String host) throws UnknownHostException {
