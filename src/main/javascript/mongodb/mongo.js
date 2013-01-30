@@ -1,19 +1,3 @@
-/**
-*    Copyright (C) 2009 10gen Inc.
-*
-*    This program is free software: you can redistribute it and/or  modify
-*    it under the terms of the GNU Affero General Public License, version 3,
-*    as published by the Free Software Foundation.
-*
-*    This program is distributed in the hope that it will be useful,
-*    but WITHOUT ANY WARRANTY; without even the implied warranty of
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*    GNU Affero General Public License for more details.
-*
-*    You should have received a copy of the GNU Affero General Public License
-*    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
-
 // mongo.js
 
 // NOTE 'Mongo' may be defined here or in MongoJS.cpp.  Add code to init, not to this constructor.
@@ -41,11 +25,18 @@ if ( typeof mongoInject == "function" ){
 }
 
 Mongo.prototype.setSlaveOk = function( value ) {
-    if( value == undefined ) value = true
-    this.slaveOk = value
+    if( value == undefined ) value = true;
+    this.slaveOk = value;
+}
+
+Mongo.prototype.getSlaveOk = function() {
+    return this.slaveOk || false;
 }
 
 Mongo.prototype.getDB = function( name ){
+    if (jsTest.options().keyFile && ((typeof this.authenticated == 'undefined') || !this.authenticated)) {
+        jsTest.authenticate(this)
+    }
     return new DB( this , name );
 }
 

@@ -1,5 +1,5 @@
 /**
- *  Copyright (c) 2012 Nick Lloyd
+ *  Copyright (c) 2013 Nick Lloyd
  *  
  *  Permission is hereby granted, free of charge, to any person obtaining a copy
  *  of this software and associated documentation files (the "Software"), to deal
@@ -19,38 +19,58 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-package org.github.nlloyd.hornofmongo;
-
-import java.net.UnknownHostException;
+package org.github.nlloyd.hornofmongo.adaptor;
 
 import org.mozilla.javascript.Context;
-
-import com.mongodb.Mongo;
+import org.mozilla.javascript.ScriptableObject;
+import org.mozilla.javascript.annotations.JSConstructor;
+import org.mozilla.javascript.annotations.JSFunction;
 
 /**
  * @author nlloyd
  *
  */
-public class MongoShell {
+public class NumberLong extends ScriptableObject {
 	
 	/**
-	 * @param args
-	 * @throws UnknownHostException 
+	 * 
 	 */
-	public static void main(String[] args) throws UnknownHostException {
-		MongoRuntime.call(new MongoAction() {
+	private static final long serialVersionUID = 7412902144340924262L;
+	private long realLong = 0;
 
-			public Object run(Context cx) {
-				return cx.evaluateString(
-						mongoScope, 
-						"var db = connect('shell_test',null,null); print('connected to: ' + db._name); " +
-						"db.test.insert({'a':1});", 
-						"shell", 
-						0, 
-						null);
-			}
-			
-		});
+	/**
+	 * @see org.mozilla.javascript.ScriptableObject#getClassName()
+	 */
+	@Override
+	public String getClassName() {
+		return this.getClass().getSimpleName();
+	}
+	
+	@JSConstructor
+	public NumberLong() {
+		put("floatApprox", this, realLong);
+	}
+	
+	@JSConstructor
+	public NumberLong(Object obj) {
+		String str = Context.toString(obj);
+		realLong = Long.valueOf(str);
+		put("floatApprox", this, realLong);
+	}
+	
+	@JSFunction
+	public long valueOf() {
+		return realLong;
+	}
+	
+	@JSFunction
+	public long toNumber() {
+		return realLong;
+	}
+	
+	@JSFunction
+	public String toString() {
+		return "NumberLong(" + realLong + ")";
 	}
 
 }

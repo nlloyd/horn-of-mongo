@@ -1,19 +1,3 @@
-/**
-*    Copyright (C) 2009 10gen Inc.
-*
-*    This program is free software: you can redistribute it and/or  modify
-*    it under the terms of the GNU Affero General Public License, version 3,
-*    as published by the Free Software Foundation.
-*
-*    This program is distributed in the hope that it will be useful,
-*    but WITHOUT ANY WARRANTY; without even the implied warranty of
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*    GNU Affero General Public License for more details.
-*
-*    You should have received a copy of the GNU Affero General Public License
-*    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
-
 // query.js
 
 if ( typeof DBQuery == "undefined" ){
@@ -48,12 +32,22 @@ DBQuery.prototype.help = function () {
     print("\t.size() - total # of objects cursor would return, honors skip,limit")
     print("\t.explain([verbose])")
     print("\t.hint(...)")
+    print("\t.addOption(n) - adds op_query options -- see wire protocol")
+    print("\t._addSpecial(name, value) - http://dochub.mongodb.org/core/advancedqueries#AdvancedQueries-Metaqueryoperators")
+    print("\t.batchSize(n) - sets the number of docs to return per getMore")
     print("\t.showDiskLoc() - adds a $diskLoc field to each returned object")
+    print("\t.min(idxDoc)")
+    print("\t.max(idxDoc)")
+    
     print("\nCursor methods");
+    print("\t.toArray() - iterates through docs and returns an array of the results")
     print("\t.forEach( func )")
     print("\t.map( func )")
     print("\t.hasNext()")
     print("\t.next()")
+    print("\t.objsLeftInBatch() - returns count of docs left in current batch (when exhausted, a new getMore will be issued)")
+    print("\t.count(applySkipLimit) - runs command at server")    
+    print("\t.itcount() - iterates through documents and counts them")
 }
 
 DBQuery.prototype.clone = function(){
@@ -147,6 +141,12 @@ DBQuery.prototype.objsLeftInBatch = function(){
     return ret;
 }
 
+DBQuery.prototype.readOnly = function(){
+    this._exec();
+    this._cursor.readOnly();
+    return this;
+}
+
 DBQuery.prototype.toArray = function(){
     if ( this._arr )
         return this._arr;
@@ -238,6 +238,26 @@ DBQuery.prototype.showDiskLoc = function() {
     return this._addSpecial( "$showDiskLoc" , true);
 }
 
+/**
+ * Sets the read preference for this cursor.
+ * 
+ * @param mode {string} read prefrence mode to use.
+ * @param tagSet {Array.<Object>} optional. The list of tags to use, order matters.
+ * 
+ * @return this cursor
+ */
+DBQuery.prototype.readPref = function( mode, tagSet ) {
+    var readPrefObj = {
+        mode: mode
+    };
+
+    if ( tagSet ){
+        readPrefObj.tags = tagSet;
+    }
+
+    return this._addSpecial( "$readPreference", readPrefObj );
+};
+
 DBQuery.prototype.forEach = function( func ){
     while ( this.hasNext() )
         func( this.next() );
@@ -252,6 +272,12 @@ DBQuery.prototype.map = function( func ){
 
 DBQuery.prototype.arrayAccess = function( idx ){
     return this.toArray()[idx];
+}
+DBQuery.prototype.comment = function (comment) {
+    var n = this.clone();
+    n._ensureSpecial();
+    n._addSpecial("$comment", comment);
+    return this.next();
 }
 
 DBQuery.prototype.explain = function (verbose) {
@@ -306,20 +332,25 @@ DBQuery.prototype.pretty = function(){
 
 DBQuery.prototype.shellPrint = function(){
     try {
+        var start = new Date().getTime();
         var n = 0;
         while ( this.hasNext() && n < DBQuery.shellBatchSize ){
             var s = this._prettyShell ? tojson( this.next() ) : tojson( this.next() , "" , true );
             print( s );
             n++;
         }
-        if ( this.hasNext() ){
-            print( "has more" );
+        if (typeof _verboseShell !== 'undefined' && _verboseShell) {
+            var time = new Date().getTime() - start;
+            print("Fetched " + n + " record(s) in " + time + "ms");
+        }
+         if ( this.hasNext() ){
+            print( "Type \"it\" for more" );
             ___it___  = this;
         }
         else {
             ___it___  = null;
         }
-    }
+   }
     catch ( e ){
         print( e );
     }
@@ -331,3 +362,18 @@ DBQuery.prototype.toString = function(){
 }
 
 DBQuery.shellBatchSize = 20;
+
+/**
+ * Query option flag bit constants.
+ * @see http://dochub.mongodb.org/core/mongowireprotocol#MongoWireProtocol-OPQUERY
+ */
+DBQuery.Option = {
+    tailable: 0x2,
+    slaveOk: 0x4,
+    oplogReplay: 0x8,
+    noTimeout: 0x10,
+    awaitData: 0x20,
+    exhaust: 0x40,
+    partial: 0x80
+};
+

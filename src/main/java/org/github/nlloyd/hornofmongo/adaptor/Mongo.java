@@ -4,6 +4,7 @@ import java.net.UnknownHostException;
 
 import org.mozilla.javascript.ScriptableObject;
 import org.mozilla.javascript.annotations.JSConstructor;
+import org.mozilla.javascript.annotations.JSFunction;
 
 import com.mongodb.DBCollection;
 
@@ -25,14 +26,6 @@ public class Mongo extends ScriptableObject {
 	
 	protected String host;
 
-	/**
-	 * @see org.mozilla.javascript.ScriptableObject#getClassName()
-	 */
-	@Override
-	public String getClassName() {
-		return this.getClass().getSimpleName();
-	}
-
 	@JSConstructor
 	public Mongo() throws UnknownHostException {
 		super();
@@ -49,17 +42,30 @@ public class Mongo extends ScriptableObject {
 		this.host = host;
 		this.innerMongo = new com.mongodb.Mongo(this.host);
 	}
-	
-	// --- Mongo js function implementation ---
-	
-	public Object insert(String ns, Object query) {
-		System.out.println(ns);
-		System.out.println(query);
-//		innerMongo.getD
-		return null;
+
+	/**
+	 * @see org.mozilla.javascript.ScriptableObject#getClassName()
+	 */
+	@Override
+	public String getClassName() {
+		return "Mongo";
 	}
 	
+	// --- Mongo JavaScript function implementation ---
+	
+//if ( ! Mongo.prototype.find )
+//    Mongo.prototype.find = function( ns , query , fields , limit , skip , batchSize , options ){ throw "find not implemented"; }
+//if ( ! Mongo.prototype.insert )
+//    Mongo.prototype.insert = function( ns , obj ){ throw "insert not implemented"; }
+//if ( ! Mongo.prototype.remove )
+//    Mongo.prototype.remove = function( ns , pattern ){ throw "remove not implemented;" }
+//if ( ! Mongo.prototype.update )
+//    Mongo.prototype.update = function( ns , query , obj , upsert ){ throw "update not implemented;" }
+	
+	@JSFunction
 	public Object find(final String ns , final Object query , final Object fields , int limit , int skip , int batchSize , int options) {
+		System.out.printf("find(%s, %s, %s, %d, %d, %d, %d)\n", ns, query, fields, limit, skip, batchSize, options);
+		
 		String[] nsBits = ns.split(".");
 		// TODO some sort of assertion that nsBits.length == 2?
 		com.mongodb.DB db = innerMongo.getDB(nsBits[0]);
@@ -68,8 +74,19 @@ public class Mongo extends ScriptableObject {
 		return null;
 	}
 	
-	protected com.mongodb.DB getDB(String dbName) {
-		return innerMongo.getDB(dbName);
+	@JSFunction
+	public void insert(final String ns, Object query) {
+		System.out.printf("insert(%s, %s)\n", ns, query);
+	}
+	
+	@JSFunction
+	public void remove(final String ns, Object pattern) {
+		System.out.printf("remove(%s, %s)\n", ns, pattern);
+	}
+	
+	@JSFunction
+	public void update(final String ns, Object query, Object obj, boolean upsert) {
+		System.out.printf("update(%s, %s, %s, %b)\n", ns, query, obj, upsert);
 	}
 	
 }

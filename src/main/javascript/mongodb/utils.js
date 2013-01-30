@@ -1,21 +1,7 @@
-/**
-*    Copyright (C) 2009 10gen Inc.
-*
-*    This program is free software: you can redistribute it and/or  modify
-*    it under the terms of the GNU Affero General Public License, version 3,
-*    as published by the Free Software Foundation.
-*
-*    This program is distributed in the hope that it will be useful,
-*    but WITHOUT ANY WARRANTY; without even the implied warranty of
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*    GNU Affero General Public License for more details.
-*
-*    You should have received a copy of the GNU Affero General Public License
-*    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
-
 __quiet = false;
 __magicNoPrint = { __magicNoPrint : 1111 }
+__callLastError = false; 
+_verboseShell = false;
 
 chatty = function(s){
     if ( ! __quiet )
@@ -54,6 +40,16 @@ printStackTrace = function(){
     }
 }
 
+/**
+ * <p> Set the shell verbosity. If verbose the shell will display more information about command results. </>
+ * <p> Default is off. <p>
+ * @param {Bool} verbosity on / off
+ */
+setVerboseShell = function( value ) { 
+    if( value == undefined ) value = true; 
+    _verboseShell = value; 
+}
+
 doassert = function (msg) {
     if (msg.indexOf("assert") == 0)
         print(msg);
@@ -69,6 +65,10 @@ assert = function( b , msg ){
         return;    
     doassert( msg == undefined ? "assert failed" : "assert failed : " + msg );
 }
+
+// the mongo code uses verify
+// so this is to be nice to mongo devs
+verify = assert;
 
 assert.automsg = function( b ) {
     assert( eval( b ), b );
@@ -104,7 +104,7 @@ assert.contains = function( o, arr, msg ){
     var wasIn = false
     
     if( ! arr.length ){
-        for( i in arr ){
+        for( var i in arr ){
             wasIn = arr[i] == o || ( ( arr[i] != null && o != null ) && friendlyEqual( arr[i] , o ) )
                 return;
             if( wasIn ) break
@@ -161,11 +161,31 @@ assert.soon = function( f, msg, timeout /*ms*/, interval ) {
             if ( f() )
                 return;
         }
-        
-        if ( ( new Date() ).getTime() - start.getTime() > timeout )
+       
+        diff = ( new Date() ).getTime() - start.getTime();
+        if ( diff > timeout )
             doassert( "assert.soon failed: " + f + ", msg:" + msg );
         sleep( interval );
     }
+}
+
+assert.time = function( f, msg, timeout /*ms*/ ) {
+    if ( assert._debug && msg ) print( "in assert for: " + msg );
+
+    var start = new Date();
+    timeout = timeout || 30000;
+        
+        if ( typeof( f ) == "string" ){
+            res = eval( f );
+        }
+        else {
+            res = f();
+        }
+       
+        diff = ( new Date() ).getTime() - start.getTime();
+        if ( diff > timeout )
+            doassert( "assert.time failed timeout " + timeout + "ms took " + diff + "ms : " + f + ", msg:" + msg );
+        return res;
 }
 
 assert.throws = function( func , params , msg ){
@@ -212,7 +232,7 @@ assert.isnull = function( what , msg ){
     if ( what == null )
         return;
     
-    doassert( "supposed to null (" + ( msg || "" ) + ") was: " + tojson( what ) );
+    doassert( "supposed to be null (" + ( msg || "" ) + ") was: " + tojson( what ) );
 }
 
 assert.lt = function( a , b , msg ){
@@ -320,6 +340,14 @@ String.prototype.rtrim = function() {
     return this.replace(/\s+$/,"");
 }
 
+String.prototype.startsWith = function (str){
+    return this.indexOf(str) == 0
+}
+
+String.prototype.endsWith = function (str){
+    return new RegExp( RegExp.escape(str) + "$" ).test( this )
+}
+
 Number.prototype.zeroPad = function(width) {
     var str = this + '';
     while (str.length < width)
@@ -401,6 +429,10 @@ ISODate = function(isoDateStr){
     }
 
     return new Date(time);
+}
+
+RegExp.escape = function( text ){
+    return text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
 }
 
 RegExp.prototype.tojson = RegExp.prototype.toString;
@@ -503,6 +535,12 @@ Array.stdDev = function( arr ){
     return Math.sqrt( sum / arr.length );
 }
 
+if( typeof Array.isArray != "function" ){
+    Array.isArray = function( arr ){
+        return arr != undefined && arr.constructor == Array
+    }
+}
+
 //these two are helpers for Array.sort(func)
 compare = function(l, r){ return (l == r ? 0 : (l < r ? -1 : 1)); }
 
@@ -513,7 +551,7 @@ compareOn = function(field){
 
 Object.keySet = function( o ) {
     var ret = new Array();
-    for( i in o ) {
+    for( var i in o ) {
         if ( !( i in o.__proto__ && o[ i ] === o.__proto__[ i ] ) ) {
             ret.push( i );
         }
@@ -541,17 +579,21 @@ if ( ! ObjectId.prototype )
     ObjectId.prototype = {}
 
 ObjectId.prototype.toString = function(){
-    return this.str;
+    return "ObjectId(" + tojson(this.str) + ")";
 }
 
 ObjectId.prototype.tojson = function(){
-    return "ObjectId(\"" + this.str + "\")";
+    return this.toString();
+}
+
+ObjectId.prototype.valueOf = function(){
+    return this.str;
 }
 
 ObjectId.prototype.isObjectId = true;
 
 ObjectId.prototype.getTimestamp = function(){
-    return new Date(parseInt(this.toString().slice(0,8), 16)*1000);
+    return new Date(parseInt(this.valueOf().slice(0,8), 16)*1000);
 }
 
 ObjectId.prototype.equals = function( other){
@@ -567,15 +609,19 @@ if ( typeof( DBPointer ) != "undefined" ){
     }
     
     DBPointer.prototype.tojson = function(indent){
-        return tojson({"ns" : this.ns, "id" : this.id}, indent);
+        return this.toString();
     }
 
     DBPointer.prototype.getCollection = function(){
         return this.ns;
     }
     
-    DBPointer.prototype.toString = function(){
-        return "DBPointer " + this.ns + ":" + this.id;
+    DBPointer.prototype.getId = function(){
+        return this.id;
+    }
+ 
+     DBPointer.prototype.toString = function(){
+        return "DBPointer(" + tojson(this.ns) + ", " + tojson(this.id) + ")";
     }
 }
 else {
@@ -591,24 +637,52 @@ if ( typeof( DBRef ) != "undefined" ){
     }
     
     DBRef.prototype.tojson = function(indent){
-        return tojson({"$ref" : this.$ref, "$id" : this.$id}, indent);
+        return this.toString();
     }
 
     DBRef.prototype.getCollection = function(){
         return this.$ref;
     }
     
+    DBRef.prototype.getRef = function(){
+        return this.$ref;
+    }
+
+    DBRef.prototype.getId = function(){
+        return this.$id;
+    }
+
     DBRef.prototype.toString = function(){
-        return this.tojson();
+        return "DBRef(" + tojson(this.$ref) + ", " + tojson(this.$id) + ")";
     }
 }
 else {
     print( "warning: no DBRef" );
 }
 
+if ( typeof( Timestamp ) != "undefined" ){
+    Timestamp.prototype.tojson = function () {
+        return this.toString();
+    }
+
+    Timestamp.prototype.getTime = function () {
+        return this.t;
+    }
+
+    Timestamp.prototype.getInc = function () {
+        return this.i;
+    }
+
+    Timestamp.prototype.toString = function () {
+        return "Timestamp(" + this.t + ", " + this.i + ")";
+    }
+}
+else {
+    print( "warning: no Timestamp class" );
+}
+
 if ( typeof( BinData ) != "undefined" ){
     BinData.prototype.tojson = function () {
-        //return "BinData type: " + this.type + " len: " + this.len;
         return this.toString();
     }
     
@@ -618,20 +692,14 @@ if ( typeof( BinData ) != "undefined" ){
     
     BinData.prototype.length = function () {
         return this.len;
-    }    
+    } 
 }
 else {
     print( "warning: no BinData class" );
 }
 
-/*if ( typeof( UUID ) != "undefined" ){
-    UUID.prototype.tojson = function () {
-        return this.toString();
-    }
-}*/
-
 if ( typeof _threadInject != "undefined" ){
-    print( "fork() available!" );
+    //print( "fork() available!" );
     
     Thread = function(){
         this.init.apply( this, arguments );
@@ -651,9 +719,10 @@ if ( typeof _threadInject != "undefined" ){
     }    
 
     // Helper class to generate a list of events which may be executed by a ParallelTester
-    EventGenerator = function( me, collectionName, mean ) {
+    EventGenerator = function( me, collectionName, mean, host ) {
         this.mean = mean;
-        this.events = new Array( me, collectionName );
+        if (host == undefined) host = db.getMongo().host;
+        this.events = new Array( me, collectionName, host );
     }
     
     EventGenerator.prototype._add = function( action ) {
@@ -694,7 +763,8 @@ if ( typeof _threadInject != "undefined" ){
         var args = argumentsToArray( arguments );
         var me = args.shift();
         var collectionName = args.shift();
-        var m = new Mongo( db.getMongo().host );
+        var host = args.shift();
+        var m = new Mongo( host );
         var t = m.getDB( "test" )[ collectionName ];
         for( var i in args ) {
             sleep( args[ i ][ 0 ] );
@@ -755,12 +825,18 @@ if ( typeof _threadInject != "undefined" ){
                                    "jstests/notablescan.js",
                                    "jstests/drop2.js",
                                    "jstests/dropdb_race.js",
+                                   "jstests/fsync2.js", // May be placed in serialTestsArr once SERVER-4243 is fixed.
                                    "jstests/bench_test1.js",
-                                   "jstests/queryoptimizera.js"] );
+                                   "jstests/padding.js",
+                                   "jstests/queryoptimizera.js",
+                                   "jstests/loglong.js" // log might overflow before 
+                                                        // this has a chance to see the message
+                                  ] );
         
         // some tests can't be run in parallel with each other
-        var serialTestsArr = [ "jstests/fsync.js",
-                              "jstests/fsync2.js" ];
+        var serialTestsArr = [ "jstests/fsync.js"
+//                              ,"jstests/fsync2.js" // SERVER-4243
+                              ];
         var serialTests = makeKeys( serialTestsArr );
         
         params[ 0 ] = serialTestsArr;
@@ -975,10 +1051,10 @@ shellPrint = function( x ){
     if ( db ){
         var e = db.getPrevError();
         if ( e.err ) {
-	    if( e.nPrev <= 1 )
-		print( "error on last call: " + tojson( e.err ) );
-	    else
-		print( "an error " + tojson(e.err) + " occurred " + e.nPrev + " operations back in the command invocation" );
+            if ( e.nPrev <= 1 )
+                print( "error on last call: " + tojson( e.err ) );
+            else
+                print( "an error " + tojson( e.err ) + " occurred " + e.nPrev + " operations back in the command invocation" );
         }
         db.resetError();
     }
@@ -1013,7 +1089,13 @@ jsTestPath = function(){
 
 jsTestOptions = function(){
     if( TestData ) return { noJournal : TestData.noJournal,
-                            noJournalPrealloc : TestData.noJournalPrealloc }
+                            noJournalPrealloc : TestData.noJournalPrealloc,
+                            auth : TestData.auth,
+                            keyFile : TestData.keyFile,
+                            authUser : "__system",
+                            authPassword : TestData.keyFileData,
+                            adminUser : "admin",
+                            adminPassword : "password" }
     return {}
 }
 
@@ -1021,17 +1103,133 @@ jsTestLog = function(msg){
     print( "\n\n----\n" + msg + "\n----\n\n" )
 }
 
-shellPrintHelper = function (x) {
+jsTest = {}
 
-    if (typeof (x) == "undefined") {
+jsTest.name = jsTestName
+jsTest.file = jsTestFile
+jsTest.path = jsTestPath
+jsTest.options = jsTestOptions
+jsTest.log = jsTestLog
 
-        if (typeof (db) != "undefined" && db.getLastError) {
-            // explicit w:1 so that replset getLastErrorDefaults aren't used here which would be bad.
-            var e = db.getLastError(1);
-            if (e != null)
-                print(e);
+jsTest.dir = function(){
+    return jsTest.path().replace( /\/[^\/]+$/, "/" )
+}
+
+jsTest.randomize = function( seed ) {
+    if( seed == undefined ) seed = new Date().getTime()
+    Random.srand( seed )
+    print( "Random seed for test : " + seed ) 
+}
+
+/**
+* Adds a user to the admin DB on the given connection. This is only used for running the test suite
+* with authentication enabled.
+*/
+jsTest.addAuth = function(conn) {
+    // Get a connection over localhost so that the first user can be added.
+    var localconn = conn;
+    if ( localconn.host.indexOf('localhost') != 0 ) {
+        print( 'Getting locahost connection instead of ' + conn + ' to add first admin user' );
+        var hosts = conn.host.split(',');
+        for ( var i = 0; i < hosts.length; i++ ) {
+            hosts[i] = 'localhost:' + hosts[i].split(':')[1];
         }
+        localconn = new Mongo(hosts.join(','));
+    }
+    print ("Adding admin user on connection: " + localconn);
+    return localconn.getDB('admin').addUser(jsTestOptions().adminUser, jsTestOptions().adminPassword,
+                                            false, 'majority', 60000);
+}
 
+jsTest.authenticate = function(conn) {
+    // Set authenticated to stop an infinite recursion from getDB calling back into authenticate
+    conn.authenticated = true;
+    if (jsTest.options().auth || jsTest.options().keyFile) {
+        print ("Authenticating to admin user on connection: " + conn);
+        conn.authenticated = conn.getDB('admin').auth(jsTestOptions().adminUser,
+                                                      jsTestOptions().adminPassword);
+        return conn.authenticated;
+    }
+}
+
+jsTest.authenticateNodes = function(nodes) {
+    jsTest.attempt({timeout:30000, desc: "Authenticate to nodes: " + nodes}, function() {
+        for (var i = 0; i < nodes.length; i++) {
+            // Don't try to authenticate to arbiters
+            res = nodes[i].getDB("admin").runCommand({replSetGetStatus: 1});
+            if(res.myState == 7) {
+                continue;
+            }
+            if(jsTest.authenticate(nodes[i]) != 1) {
+                return false;
+            }
+        }
+        return true;
+    });
+}
+
+jsTest.isMongos = function(conn) {
+    return conn.getDB('admin').isMaster().msg=='isdbgrid';
+}
+
+// Pass this method a function to call repeatedly until
+// that function returns true. Example:
+//   attempt({timeout: 20000, desc: "get master"}, function() { // return false until success })
+jsTest.attempt = function( opts, func ) {
+    var timeout = opts.timeout || 1000;
+    var tries   = 0;
+    var sleepTime = 2000;
+    var result = null;
+    var context = opts.context || this;
+
+    while((result = func.apply(context)) == false) {
+        tries += 1;
+        sleep(sleepTime);
+        if( tries * sleepTime > timeout) {
+            throw('[' + opts['desc'] + ']' + " timed out after " + timeout + "ms ( " + tries + " tries )");
+        }
+    }
+
+    return result;
+}
+
+replSetMemberStatePrompt = function() {
+    var state = '';
+    var stateInfo = db.getSiblingDB( 'admin' ).runCommand( { replSetGetStatus:1, forShell:1 } );
+    if ( stateInfo.ok ) {
+        // Report the self member's stateStr if it's present.
+        stateInfo.members.forEach( function( member ) {
+                                      if ( member.self ) {
+                                          state = member.stateStr;
+                                      }
+                                  } );
+        // Otherwise fall back to reporting the numeric myState field (mongodb 1.6).
+        if ( !state ) {
+            state = stateInfo.myState;
+        }
+        state = '' + stateInfo.set + ':' + state;
+    }
+    else {
+        var info = stateInfo.info;
+        if ( info && info.length < 20 ) {
+            state = info; // "mongos", "configsvr"
+        }
+    }
+    return state + '> ';
+}
+
+shellPrintHelper = function (x) {
+    if (typeof (x) == "undefined") {
+        // Make sure that we have a db var before we use it
+        // TODO: This implicit calling of GLE can cause subtle, hard to track issues - remove?
+        if (__callLastError && typeof( db ) != "undefined" && db.getMongo ) {
+            __callLastError = false;
+            // explicit w:1 so that replset getLastErrorDefaults aren't used here which would be bad.
+            var err = db.getLastError(1);
+            if (err != null) {
+                print(err);
+            }
+        }
         return;
     }
 
@@ -1057,107 +1255,112 @@ shellPrintHelper = function (x) {
         print(tojson(x));
 }
 
-shellAutocomplete = function (/*prefix*/){ // outer scope function called on init. Actual function at end
+shellAutocomplete = function ( /*prefix*/ ) { // outer scope function called on init. Actual function at end
 
-    var universalMethods = "constructor prototype toString valueOf toLocaleString hasOwnProperty propertyIsEnumerable".split(' ');
+    var universalMethods = "constructor prototype toString valueOf toLocaleString hasOwnProperty propertyIsEnumerable".split( ' ' );
 
     var builtinMethods = {}; // uses constructor objects as keys
-    builtinMethods[Array] = "length concat join pop push reverse shift slice sort splice unshift indexOf lastIndexOf every filter forEach map some".split(' ');
-    builtinMethods[Boolean] = "".split(' '); // nothing more than universal methods
-    builtinMethods[Date] = "getDate getDay getFullYear getHours getMilliseconds getMinutes getMonth getSeconds getTime getTimezoneOffset getUTCDate getUTCDay getUTCFullYear getUTCHours getUTCMilliseconds getUTCMinutes getUTCMonth getUTCSeconds getYear parse setDate setFullYear setHours setMilliseconds setMinutes setMonth setSeconds setTime setUTCDate setUTCFullYear setUTCHours setUTCMilliseconds setUTCMinutes setUTCMonth setUTCSeconds setYear toDateString toGMTString toLocaleDateString toLocaleTimeString toTimeString toUTCString UTC".split(' ');
-    builtinMethods[Math] = "E LN2 LN10 LOG2E LOG10E PI SQRT1_2 SQRT2 abs acos asin atan atan2 ceil cos exp floor log max min pow random round sin sqrt tan".split(' ');
-    builtinMethods[Number] = "MAX_VALUE MIN_VALUE NEGATIVE_INFINITY POSITIVE_INFINITY toExponential toFixed toPrecision".split(' ');
-    builtinMethods[RegExp] = "global ignoreCase lastIndex multiline source compile exec test".split(' ');
-    builtinMethods[String] = "length charAt charCodeAt concat fromCharCode indexOf lastIndexOf match replace search slice split substr substring toLowerCase toUpperCase".split(' ');
-    builtinMethods[Function] = "call apply".split(' ');
-    builtinMethods[Object] = "bsonsize".split(' ');
+    builtinMethods[Array] = "length concat join pop push reverse shift slice sort splice unshift indexOf lastIndexOf every filter forEach map some".split( ' ' );
+    builtinMethods[Boolean] = "".split( ' ' ); // nothing more than universal methods
+    builtinMethods[Date] = "getDate getDay getFullYear getHours getMilliseconds getMinutes getMonth getSeconds getTime getTimezoneOffset getUTCDate getUTCDay getUTCFullYear getUTCHours getUTCMilliseconds getUTCMinutes getUTCMonth getUTCSeconds getYear parse setDate setFullYear setHours setMilliseconds setMinutes setMonth setSeconds setTime setUTCDate setUTCFullYear setUTCHours setUTCMilliseconds setUTCMinutes setUTCMonth setUTCSeconds setYear toDateString toGMTString toLocaleDateString toLocaleTimeString toTimeString toUTCString UTC".split( ' ' );
+    builtinMethods[Math] = "E LN2 LN10 LOG2E LOG10E PI SQRT1_2 SQRT2 abs acos asin atan atan2 ceil cos exp floor log max min pow random round sin sqrt tan".split( ' ' );
+    builtinMethods[Number] = "MAX_VALUE MIN_VALUE NEGATIVE_INFINITY POSITIVE_INFINITY toExponential toFixed toPrecision".split( ' ' );
+    builtinMethods[RegExp] = "global ignoreCase lastIndex multiline source compile exec test".split( ' ' );
+    builtinMethods[String] = "length charAt charCodeAt concat fromCharCode indexOf lastIndexOf match replace search slice split substr substring toLowerCase toUpperCase".split( ' ' );
+    builtinMethods[Function] = "call apply".split( ' ' );
+    builtinMethods[Object] = "bsonsize".split( ' ' );
 
-    builtinMethods[Mongo] = "find update insert remove".split(' ');
-    builtinMethods[BinData] = "hex base64 length subtype".split(' ');
+    builtinMethods[Mongo] = "find update insert remove".split( ' ' );
+    builtinMethods[BinData] = "hex base64 length subtype".split( ' ' );
 
-    var extraGlobals = "Infinity NaN undefined null true false decodeURI decodeURIComponent encodeURI encodeURIComponent escape eval isFinite isNaN parseFloat parseInt unescape Array Boolean Date Math Number RegExp String print load gc MinKey MaxKey Mongo NumberLong ObjectId DBPointer UUID BinData Map".split(' ');
+    var extraGlobals = "Infinity NaN undefined null true false decodeURI decodeURIComponent encodeURI encodeURIComponent escape eval isFinite isNaN parseFloat parseInt unescape Array Boolean Date Math Number RegExp String print load gc MinKey MaxKey Mongo NumberInt NumberLong ObjectId DBPointer UUID BinData HexData MD5 Map".split( ' ' );
 
-    var isPrivate = function(name){
-        if (shellAutocomplete.showPrivate) return false;
-        if (name == '_id') return false;
-        if (name[0] == '_') return true;
-        if (name[name.length-1] == '_') return true; // some native functions have an extra name_ method
+    var isPrivate = function( name ) {
+        if ( shellAutocomplete.showPrivate ) return false;
+        if ( name == '_id' ) return false;
+        if ( name[0] == '_' ) return true;
+        if ( name[name.length - 1] == '_' ) return true; // some native functions have an extra name_ method
         return false;
     }
 
-    var customComplete = function(obj){
+    var customComplete = function( obj ) {
         try {
-            if(obj.__proto__.constructor.autocomplete){
-                var ret = obj.constructor.autocomplete(obj);
-                if (ret.constructor != Array){
-                    print("\nautocompleters must return real Arrays");
+            if ( obj.__proto__.constructor.autocomplete ) {
+                var ret = obj.constructor.autocomplete( obj );
+                if ( ret.constructor != Array ) {
+                    print( "\nautocompleters must return real Arrays" );
                     return [];
                 }
                 return ret;
             } else {
                 return [];
             }
-        } catch (e) {
-            // print(e); // uncomment if debugging custom completers
+        } catch ( e ) {
+            // print( e ); // uncomment if debugging custom completers
             return [];
         }
     }
 
-    var worker = function( prefix ){
-        var global = (function(){return this;}).call(); // trick to get global object
+    var worker = function( prefix ) {
+        var global = ( function() { return this; } ).call(); // trick to get global object
 
         var curObj = global;
-        var parts = prefix.split('.');
-        for (var p=0; p < parts.length - 1; p++){ // doesn't include last part
+        var parts = prefix.split( '.' );
+        for ( var p = 0; p < parts.length - 1; p++ ) { // doesn't include last part
             curObj = curObj[parts[p]];
-            if (curObj == null)
+            if ( curObj == null )
                 return [];
         }
 
-        var lastPrefix = parts[parts.length-1] || '';
-        var begining = parts.slice(0, parts.length-1).join('.');
-        if (begining.length)
-            begining += '.';
+        var lastPrefix = parts[parts.length - 1] || '';
+        var lastPrefixLowercase = lastPrefix.toLowerCase()
+        var beginning = parts.slice( 0, parts.length - 1 ).join( '.' );
+        if ( beginning.length )
+            beginning += '.';
 
         var possibilities = new Array().concat(
             universalMethods,
-            Object.keySet(curObj),
-            Object.keySet(curObj.__proto__),
+            Object.keySet( curObj ),
+            Object.keySet( curObj.__proto__ ),
             builtinMethods[curObj] || [], // curObj is a builtin constructor
             builtinMethods[curObj.__proto__.constructor] || [], // curObj is made from a builtin constructor
             curObj == global ? extraGlobals : [],
-            customComplete(curObj)
+            customComplete( curObj )
         );
 
-        var ret = [];
-        for (var i=0; i < possibilities.length; i++){
+        var noDuplicates = {}; // see http://dreaminginjavascript.wordpress.com/2008/08/22/eliminating-duplicates/
+        for ( var i = 0; i < possibilities.length; i++ ) {
             var p = possibilities[i];
-            if (typeof(curObj[p]) == "undefined" && curObj != global) continue; // extraGlobals aren't in the global object
-            if (p.length == 0 || p.length < lastPrefix.length) continue;
-            if (lastPrefix[0] != '_' && isPrivate(p)) continue;
-            if (p.match(/^[0-9]+$/)) continue; // don't array number indexes
-            if (p.substr(0, lastPrefix.length) != lastPrefix) continue;
+            if ( typeof ( curObj[p] ) == "undefined" && curObj != global ) continue; // extraGlobals aren't in the global object
+            if ( p.length == 0 || p.length < lastPrefix.length ) continue;
+            if ( lastPrefix[0] != '_' && isPrivate( p ) ) continue;
+            if ( p.match( /^[0-9]+$/ ) ) continue; // don't array number indexes
+            if ( p.substr( 0, lastPrefix.length ).toLowerCase() != lastPrefixLowercase ) continue;
 
-            var completion = begining + p;
-            if(curObj[p] && curObj[p].constructor == Function && p != 'constructor')
+            var completion = beginning + p;
+            if ( curObj[p] && curObj[p].constructor == Function && p != 'constructor' )
                 completion += '(';
 
-            ret.push(completion);
+            noDuplicates[completion] = 0;
         }
+
+        var ret = [];
+        for ( var i in noDuplicates )
+            ret.push( i );
 
         return ret;
     }
 
     // this is the actual function that gets assigned to shellAutocomplete
-    return function( prefix ){
+    return function( prefix ) {
         try {
-            __autocomplete__ = worker(prefix).sort();
-        }catch (e){
-            print("exception durring autocomplete: " + tojson(e.message));
+            __autocomplete__ = worker( prefix ).sort();
+        } catch ( e ) {
+            print( "exception during autocomplete: " + tojson( e.message ) );
             __autocomplete__ = [];
         }
     }
-}();
+} ();
 
 shellAutocomplete.showPrivate = false; // toggle to show (useful when working on internals)
 
@@ -1183,6 +1386,26 @@ shellHelper.use = function (dbname) {
     }
     db = db.getMongo().getDB(dbname);
     print("switched to db " + db.getName());
+}
+
+shellHelper.set = function (str) {
+    if (str == "") {
+        print("bad use parameter");
+        return;
+    }
+    tokens = str.split(" ");
+    param = tokens[0];
+    value = tokens[1];
+    
+    if ( value == undefined ) value = true;
+    // value comes in as a string..
+    if ( value == "true" ) value = true;
+    if ( value == "false" ) value = false;
+
+    if (param == "verbose") {
+        _verboseShell = value;
+    }
+    print("set " + param + " to " + value);
 }
 
 shellHelper.it = function(){
@@ -1467,6 +1690,7 @@ rs.help = function () {
     print("\trs.add(membercfgobj)            add a new member to the set with extra attributes (disconnects)");
     print("\trs.addArb(hostportstr)          add a new member which is arbiterOnly:true (disconnects)");
     print("\trs.stepDown([secs])             step down as primary (momentarily) (disconnects)");
+    print("\trs.syncFrom(hostportstr)        make a secondary to sync from the given member");
     print("\trs.freeze(secs)                 make a node ineligible to become primary for the time specified");
     print("\trs.remove(hostportstr)          remove a host from the replica set (disconnects)");
     print("\trs.slaveOk()                    shorthand for db.getMongo().setSlaveOk()");
@@ -1477,7 +1701,7 @@ rs.help = function () {
     print("\tan error, even if the command succeeds.");
     print("\tsee also http://<mongod_host>:28017/_replSet for additional diagnostic info");
 }
-rs.slaveOk = function () { return db.getMongo().setSlaveOk(); }
+rs.slaveOk = function (value) { return db.getMongo().setSlaveOk(value); }
 rs.status = function () { return db._adminCommand("replSetGetStatus"); }
 rs.isMaster = function () { return db.isMaster(); }
 rs.initiate = function (c) { return db._adminCommand({ replSetInitiate: c }); }
@@ -1536,6 +1760,7 @@ rs.add = function (hostport, arb) {
     c.members.push(cfg);
     return this._runCmd({ replSetReconfig: c });
 }
+rs.syncFrom = function (host) { return db._adminCommand({replSetSyncFrom : host}); };
 rs.stepDown = function (secs) { return db._adminCommand({ replSetStepDown:(secs === undefined) ? 60:secs}); }
 rs.freeze = function (secs) { return db._adminCommand({replSetFreeze:secs}); }
 rs.addArb = function (hn) { return this.add(hn, true); }
@@ -1596,7 +1821,7 @@ rs.debug.getLastOpWritten = function(server) {
 
 help = shellHelper.help = function (x) {
     if (x == "mr") {
-        print("\nSee also http://www.mongodb.org/display/DOCS/MapReduce");
+        print("\nSee also http://dochub.mongodb.org/core/mapreduce");
         print("\nfunction mapf() {");
         print("  // 'this' holds current document to inspect");
         print("  emit(key, value);");
@@ -1647,12 +1872,16 @@ help = shellHelper.help = function (x) {
         print("\tb = HexData(subtype,hexstr)         create a BSON BinData value from a hex string");
         print("\tb = UUID(hexstr)                    create a BSON BinData value of UUID subtype");
         print("\tb = MD5(hexstr)                     create a BSON BinData value of MD5 subtype");
+        print("\t\"hexstr\"                            string, sequence of hex characters (no 0x prefix)");
         print();
         print("\to = new ObjectId()                  create a new ObjectId");
         print("\to.getTimestamp()                    return timestamp derived from first 32 bits of the OID");
         print("\to.isObjectId()");
         print("\to.toString()");
         print("\to.equals(otherid)");
+        print();
+        print("\td = ISODate()                       like Date() but behaves more intuitively when used");
+        print("\td = ISODate('YYYY-MM-DD hh:mm:ss')    without an explicit \"new \" prefix on construction");
         return;
     }
     else if (x == "admin") {
@@ -1685,7 +1914,8 @@ help = shellHelper.help = function (x) {
     else if (x == "") {
         print("\t" + "db.help()                    help on db methods");
         print("\t" + "db.mycoll.help()             help on collection methods");
-        print("\t" + "rs.help()                    help on replica set methods");
+        print("\t" + "sh.help()                    sharding helpers");
+        print("\t" + "rs.help()                    replica set helpers");
         print("\t" + "help admin                   administrative help");
         print("\t" + "help connect                 connecting to a db help");
         print("\t" + "help keys                    key shortcuts");

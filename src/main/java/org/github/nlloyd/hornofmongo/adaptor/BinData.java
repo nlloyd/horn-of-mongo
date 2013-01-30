@@ -1,5 +1,5 @@
 /**
- *  Copyright (c) 2012 Nick Lloyd
+ *  Copyright (c) 2013 Nick Lloyd
  *  
  *  Permission is hereby granted, free of charge, to any person obtaining a copy
  *  of this software and associated documentation files (the "Software"), to deal
@@ -21,6 +21,8 @@
  */
 package org.github.nlloyd.hornofmongo.adaptor;
 
+import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.codec.binary.Hex;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ScriptableObject;
 import org.mozilla.javascript.annotations.JSConstructor;
@@ -30,36 +32,51 @@ import org.mozilla.javascript.annotations.JSFunction;
  * @author nlloyd
  *
  */
-public class ObjectId extends ScriptableObject {
+public class BinData extends ScriptableObject {
 	
-	private org.bson.types.ObjectId realObjectId;
+	private int type;
+	private byte[] data;
 
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = 5594412197023274036L;
+	private static final long serialVersionUID = 8887293438121607724L;
+	
+	public BinData() {}
+	
+	@JSConstructor
+	public BinData(int type, Object obj) {
+		if((type < 0) ||(type > 255)) {
+			throw new IllegalArgumentException(
+					"invalid BinData subtype -- range is 0..255 see bsonspec.org");
+		}
+		this.type = type;
+		data = Base64.decodeBase64(Context.toString(obj));
+		put("type", this, type);
+		put("len", this, data.length);
+	}
 
+	/**
+	 * @see org.mozilla.javascript.ScriptableObject#getClassName()
+	 */
 	@Override
 	public String getClassName() {
-		return this.getClass().getSimpleName();
-	}
-	
-	@JSConstructor
-	public ObjectId() {
-		realObjectId = new org.bson.types.ObjectId();
-		put("str", this, realObjectId.toString());
-	}
-	
-	@JSConstructor
-	public ObjectId(Object obj) {
-		String str = Context.toString(obj);
-		realObjectId = new org.bson.types.ObjectId(str);
-		put("str", this, realObjectId.toString());
+		return "BinData";
 	}
 	
 	@JSFunction
 	public String toString() {
-		return realObjectId.toString();
+		return "BinData(" + type + ",\"" + Base64.encodeBase64String(data) + "\")";
+	}
+	
+	@JSFunction
+	public String base64() {
+		return Base64.encodeBase64String(data);
+	}
+	
+	@JSFunction
+	public String hex() {
+		return Hex.encodeHexString(data);
 	}
 
 }

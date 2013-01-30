@@ -21,6 +21,7 @@
  */
 package org.github.nlloyd.hornofmongo.adaptor;
 
+import org.apache.commons.lang3.StringUtils;
 import org.github.nlloyd.hornofmongo.MongoAction;
 import org.github.nlloyd.hornofmongo.MongoRuntime;
 import org.github.nlloyd.hornofmongo.exception.MongoScopeException;
@@ -29,8 +30,6 @@ import org.mozilla.javascript.Function;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
 import org.mozilla.javascript.annotations.JSConstructor;
-import org.mozilla.javascript.annotations.JSGetter;
-import org.mozilla.javascript.annotations.JSSetter;
 
 import com.mongodb.DBCollection;
 
@@ -51,14 +50,29 @@ public class DB extends ScriptableObject {
 	 */
 	private static final long serialVersionUID = 3314929237218125656L;
 	
-	private Mongo mongo;
-	private String name;
+	protected Mongo mongo;
+	protected String name;
+	
+	public DB() {}
+	
+	@JSConstructor
+	public DB(Mongo mongo) {
+		super();
+		this.mongo = mongo;
+		this.name = "test";
+		put("_mongo", this, this.mongo);
+		put("_name", this, this.name);
+	}
 	
 	@JSConstructor
 	public DB(Mongo mongo, String name) {
 		super();
 		this.mongo = mongo;
 		this.name = name;
+		if(StringUtils.isBlank(name))
+			this.name = "test";
+		put("_mongo", this, this.mongo);
+		put("_name", this, this.name);
 	}
 
 	/**
@@ -66,9 +80,9 @@ public class DB extends ScriptableObject {
 	 */
 	@Override
 	public String getClassName() {
-		return this.getClass().getSimpleName();
+		return "DB";
 	}
-
+	
 	/**
 	 * Returns either the JavaScript property if it exists or a new {@link DBCollection} instance
 	 * with the provided name.
@@ -78,59 +92,42 @@ public class DB extends ScriptableObject {
 	@Override
 	public Object get(String name, Scriptable start) {
 		Object property = super.get(name, start);
-		if(property == ScriptableObject.NOT_FOUND) {
-			// TODO how to handle isSpecialName(name) call from sm_db.cpp... or is it even necessary?
-			// create JS API DBCollection instance as opposed to Java driver equivalent to support JS API implementation
+		if((property == ScriptableObject.NOT_FOUND)
+				&& this.equals(start)
+				&& !isSpecialName(name)
+				&& !ScriptableObject.hasProperty(this, name)) {
 			property = MongoRuntime.call(new DBCollectionConstructor(mongo, this, name));
 			this.put(name, this, property);
 		}
 		return property;
 	}
-
-	/**
-	 * @return the _mongo
-	 */
-	@JSGetter
-	public Mongo _mongo() {
-		return mongo;
-	}
-
-	/**
-	 * @param _mongo the _mongo to set
-	 */
-	@JSSetter
-	public void _mongo(Mongo mongo) {
-		this.mongo = mongo;
-	}
-
-	/**
-	 * @return the name
-	 */
-	@JSGetter
-	public String _name() {
-		return name;
-	}
-
-	/**
-	 * @param name the name to set
-	 */
-	@JSSetter
-	public void _name(String name) {
-		this.name = name;
-		
-	}
 	
+	
+    private boolean isSpecialName(final String name) {
+    	boolean isSpecial = false;
+    	if(StringUtils.isNotEmpty(name)
+    			&& (name.startsWith("_")
+					|| "tojson".equalsIgnoreCase(name)
+					|| "toString".equals(name))) {
+    		isSpecial = true;
+    	}
+    	
+    	return isSpecial;
+    }
+
+
 	private class DBCollectionConstructor extends MongoAction {
 
 		Mongo mongo;
 		DB db;
-		String name;
+		String shortName;
 		String fullName;
 		
 		public DBCollectionConstructor(Mongo mongo, DB db, String name) {
 			this.mongo = mongo;
 			this.db = db;
-			this.fullName = db._name() + "." + name;
+			this.shortName = name;
+			this.fullName = db.name + "." + name;
 		}
 
 		public Object run(Context cx) {
@@ -138,7 +135,12 @@ public class DB extends ScriptableObject {
 			if((dbc != null) && (dbc instanceof Function)) {
 				Function dbcc = (Function)dbc;
 		        Scriptable newCollection = dbcc.construct(cx, mongoScope, 
-		        		new Object[]{mongo, db, name, fullName});
+		        		new Object[]{
+		        			mongo, 
+		        			db, 
+		        			Context.toString(shortName), 
+		        			Context.toString(fullName)
+		        			});
 		        return newCollection;
 			} else {
 				throw new MongoScopeException("MongoDB JS API function named DB not found!  " +

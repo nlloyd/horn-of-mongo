@@ -19,7 +19,7 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-package org.github.nlloyd.hornofmongo.scope;
+package org.github.nlloyd.hornofmongo;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -28,8 +28,11 @@ import java.io.Reader;
 import java.lang.reflect.InvocationTargetException;
 
 import org.apache.log4j.Logger;
+import org.github.nlloyd.hornofmongo.adaptor.BinData;
 import org.github.nlloyd.hornofmongo.adaptor.DB;
 import org.github.nlloyd.hornofmongo.adaptor.Mongo;
+import org.github.nlloyd.hornofmongo.adaptor.NumberInt;
+import org.github.nlloyd.hornofmongo.adaptor.NumberLong;
 import org.github.nlloyd.hornofmongo.adaptor.ObjectId;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ScriptableObject;
@@ -83,6 +86,10 @@ public class MongoScope extends Global {
 		ScriptableObject.defineClass(this, Mongo.class, false, false);
 		ScriptableObject.defineClass(this, ObjectId.class, false, false);
 		ScriptableObject.defineClass(this, DB.class, false, false);
+		ScriptableObject.defineClass(this, BinData.class, false, false);
+		
+		ScriptableObject.defineClass(this, NumberLong.class, false, false);
+		ScriptableObject.defineClass(this, NumberInt.class, false, false);
 		
 //        assert( JS_InitClass( cx , global , 0 , &mongo_class , local ? mongo_local_constructor : mongo_external_constructor , 0 , 0 , mongo_functions , 0 , 0 ) );
 //
@@ -115,7 +122,7 @@ public class MongoScope extends Global {
 		for(String jsSetupFile : mongoApiFiles) {
 			try {
 				context.evaluateReader(this, loadFromClasspath(jsSetupFile), 
-						"setup", 0, null);
+						jsSetupFile, 0, null);
 			} catch (IOException e) {
 				logger.error("Caught IOException attempting to load from classpath: " + jsSetupFile, e);
 			}

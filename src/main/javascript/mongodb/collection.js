@@ -1,19 +1,3 @@
-/**
-*    Copyright (C) 2009 10gen Inc.
-*
-*    This program is free software: you can redistribute it and/or  modify
-*    it under the terms of the GNU Affero General Public License, version 3,
-*    as published by the Free Software Foundation.
-*
-*    This program is distributed in the hope that it will be useful,
-*    but WITHOUT ANY WARRANTY; without even the implied warranty of
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*    GNU Affero General Public License for more details.
-*
-*    You should have received a copy of the GNU Affero General Public License
-*    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
-
 // @file collection.js - DBCollection support in the mongo shell
 // db.colName is a DBCollection object
 // or db["colName"]
@@ -48,10 +32,12 @@ DBCollection.prototype.help = function () {
     print("DBCollection help");
     print("\tdb." + shortName + ".find().help() - show DBCursor help");
     print("\tdb." + shortName + ".count()");
+    print("\tdb." + shortName + ".copyTo(newColl) - duplicates collection by copying all documents to newColl; no indexes are copied.");
+    print("\tdb." + shortName + ".convertToCapped(maxBytes) - calls {convertToCapped:'" + shortName + "', size:maxBytes}} command");
     print("\tdb." + shortName + ".dataSize()");
-    print("\tdb." + shortName + ".distinct( key ) - eg. db." + shortName + ".distinct( 'x' )");
+    print("\tdb." + shortName + ".distinct( key ) - e.g. db." + shortName + ".distinct( 'x' )");
     print("\tdb." + shortName + ".drop() drop the collection");
-    print("\tdb." + shortName + ".dropIndex(name)");
+    print("\tdb." + shortName + ".dropIndex(index) - e.g. db." + shortName + ".dropIndex( \"indexName\" ) or db." + shortName + ".dropIndex( { \"indexKey\" : 1 } )");
     print("\tdb." + shortName + ".dropIndexes()");
     print("\tdb." + shortName + ".ensureIndex(keypattern[,options]) - options is an object with these possible fields: name, unique, dropDups");
     print("\tdb." + shortName + ".reIndex()");
@@ -66,6 +52,7 @@ DBCollection.prototype.help = function () {
     print("\tdb." + shortName + ".getDB() get DB object associated with collection");
     print("\tdb." + shortName + ".getIndexes()");
     print("\tdb." + shortName + ".group( { key : ..., initial: ..., reduce : ...[, cond: ...] } )");
+    print("\tdb." + shortName + ".insert(obj)");
     print("\tdb." + shortName + ".mapReduce( mapFunction , reduceFunction , <optional params> )");
     print("\tdb." + shortName + ".remove(query)");
     print("\tdb." + shortName + ".renameCollection( newName , <dropTarget> ) renames the collection.");
@@ -75,10 +62,11 @@ DBCollection.prototype.help = function () {
     print("\tdb." + shortName + ".storageSize() - includes free space allocated to this collection");
     print("\tdb." + shortName + ".totalIndexSize() - size in bytes of all the indexes");
     print("\tdb." + shortName + ".totalSize() - storage allocated for all data and indexes");
-    print("\tdb." + shortName + ".update(query, object[, upsert_bool, multi_bool])");
+    print("\tdb." + shortName + ".update(query, object[, upsert_bool, multi_bool]) - instead of two flags, you can pass an object with fields: upsert, multi");
     print("\tdb." + shortName + ".validate( <full> ) - SLOW");;
     print("\tdb." + shortName + ".getShardVersion() - only for use with sharding");
     print("\tdb." + shortName + ".getShardDistribution() - prints statistics about data distribution in the cluster");
+    print("\tdb." + shortName + ".getSplitKeysForChunks( <maxChunkSize> ) - calculates split points over all chunks and returns splitter function");
     return __magicNoPrint;
 }
 
@@ -157,14 +145,14 @@ DBCollection.prototype._validateForStorage = function( o ){
 };
 
 
-DBCollection.prototype.find = function( query , fields , limit , skip ){
+DBCollection.prototype.find = function( query , fields , limit , skip, batchSize, options ){
     return new DBQuery( this._mongo , this._db , this ,
-                        this._fullName , this._massageObject( query ) , fields , limit , skip );
+                        this._fullName , this._massageObject( query ) , fields , limit , skip , batchSize , options || this.getQueryOptions() );
 }
 
-DBCollection.prototype.findOne = function( query , fields ){
+DBCollection.prototype.findOne = function( query , fields, options ){
     var cursor = this._mongo.find( this._fullName , this._massageObject( query ) || {} , fields , 
-        -1 /* limit */ , 0 /* skip*/, 0 /* batchSize */ , 0 /* options */ );
+        -1 /* limit */ , 0 /* skip*/, 0 /* batchSize */ , options || this.getQueryOptions() /* options */ );
     if ( ! cursor.hasNext() )
         return null;
     var ret = cursor.next();
@@ -180,15 +168,17 @@ DBCollection.prototype.insert = function( obj , _allow_dot ){
     if ( ! _allow_dot ) {
         this._validateForStorage( obj );
     }
-    if ( typeof( obj._id ) == "undefined" ){
+    if ( typeof( obj._id ) == "undefined" && ! Array.isArray( obj ) ){
         var tmp = obj; // don't want to modify input
         obj = {_id: new ObjectId()};
         for (var key in tmp){
             obj[key] = tmp[key];
         }
     }
+    this._db._initExtraInfo();
     this._mongo.insert( this._fullName , obj );
     this._lastID = obj._id;
+    this._db._getExtraInfo("Inserted");
 }
 
 DBCollection.prototype.remove = function( t , justOne ){
@@ -197,7 +187,9 @@ DBCollection.prototype.remove = function( t , justOne ){
             throw "can't have _id set to undefined in a remove expression"
         }
     }
+    this._db._initExtraInfo();
     this._mongo.remove( this._fullName , this._massageObject( t ) , justOne ? true : false );
+    this._db._getExtraInfo("Removed");
 }
 
 DBCollection.prototype.update = function( query , obj , upsert , multi ){
@@ -214,7 +206,19 @@ DBCollection.prototype.update = function( query , obj , upsert , multi ){
         // we're basically inserting a brand new object, do full validation
         this._validateForStorage( obj );
     }
+
+    // can pass options via object for improved readability    
+    if ( typeof(upsert) === 'object' ) {
+        assert( multi === undefined, "Fourth argument must be empty when specifying upsert and multi with an object." );
+
+        opts = upsert;
+        multi = opts.multi;
+        upsert = opts.upsert;
+    }
+
+    this._db._initExtraInfo();
     this._mongo.update( this._fullName , query , obj , upsert ? true : false , multi ? true : false );
+    this._db._getExtraInfo("Updated");
 }
 
 DBCollection.prototype.save = function( obj ){
@@ -244,8 +248,7 @@ DBCollection.prototype._genIndexName = function( keys ){
             name += "_";
         name += k + "_";
 
-        if ( typeof v == "number" )
-            name += v;
+        name += v;
     }
     return name;
 }
@@ -380,7 +383,7 @@ DBCollection.prototype.findAndModify = function(args){
         if (ret.errmsg == "No matching object found"){
             return null;
         }
-        throw "findAndModifyFailed failed: " + tojson( ret.errmsg );
+        throw "findAndModifyFailed failed: " + tojson( ret );
     }
     return ret.value;
 }
@@ -461,21 +464,19 @@ DBCollection.prototype.clean = function() {
  * <p>Drop a specified index.</p>
  *
  * <p>
- * Name is the name of the index in the system.indexes name field. (Run db.system.indexes.find() to
- *  see example data.)
+ * "index" is the name of the index in the system.indexes name field (run db.system.indexes.find() to
+ *  see example data), or an object holding the key(s) used to create the index.
+ * For example:
+ *  db.collectionName.dropIndex( "myIndexName" );
+ *  db.collectionName.dropIndex( { "indexKey" : 1 } );
  * </p>
  *
- * <p>Note :  alpha: space is not reclaimed </p>
- * @param {String} name of index to delete.
+ * @param {String} name or key object of index to delete.
  * @return A result object.  result.ok will be true if successful.
  */
 DBCollection.prototype.dropIndex =  function(index) {
-    assert(index , "need to specify index to dropIndex" );
-
-    if ( ! isString( index ) && isObject( index ) )
-    	index = this._genIndexName( index );
-
-    var res = this._dbCommand( "deleteIndexes" ,{ index: index } );
+    assert(index, "need to specify index to dropIndex" );
+    var res = this._dbCommand( "deleteIndexes", { index: index } );
     this.resetIndexCache();
     return res;
 }
@@ -572,6 +573,20 @@ DBCollection.prototype.distinct = function( keyString , query ){
     return res.values;
 }
 
+
+DBCollection.prototype.aggregate = function( ops ) {
+    
+    var arr = ops;
+    
+    if ( ! ops.length ) {
+        arr = [];
+        for ( var i=0; i<arguments.length; i++ ) {
+            arr.push( arguments[i] )
+        }
+    }
+    
+    return this.runCommand( "aggregate" , { pipeline : arr } );
+}
 
 DBCollection.prototype.group = function( params ){
     params.ns = this._shortName;
@@ -753,8 +768,8 @@ DBCollection.prototype.getShardDistribution = function(){
    
 }
 
-// In testing phase, use with caution
-DBCollection.prototype._getSplitKeysForChunks = function( chunkSize ){
+
+DBCollection.prototype.getSplitKeysForChunks = function( chunkSize ){
        
    var stats = this.stats()
    
@@ -846,6 +861,8 @@ DBCollection.prototype._getSplitKeysForChunks = function( chunkSize ){
        sleep( 1 )
    }
    
+   splitFunction.getSplitPoints = function(){ return allSplitPoints; }
+   
    print( "\nGenerated " + numSplits + " split keys, run output function to perform splits.\n" +
           " ex : \n" + 
           "  > var splitter = <collection>.getSplitKeysForChunks()\n" +
@@ -855,6 +872,19 @@ DBCollection.prototype._getSplitKeysForChunks = function( chunkSize ){
    
 }
 
+DBCollection.prototype.setSlaveOk = function( value ) {
+    if( value == undefined ) value = true;
+    this._slaveOk = value;
+}
 
+DBCollection.prototype.getSlaveOk = function() {
+    if (this._slaveOk != undefined) return this._slaveOk;
+    return this._db.getSlaveOk();
+}
 
+DBCollection.prototype.getQueryOptions = function() {
+    var options = 0;
+    if (this.getSlaveOk()) options |= 4;
+    return options;
+}
 

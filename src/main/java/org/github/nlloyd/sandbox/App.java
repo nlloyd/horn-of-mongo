@@ -30,6 +30,10 @@ import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ContextAction;
 import org.mozilla.javascript.ContextFactory;
 import org.mozilla.javascript.Scriptable;
+import org.mozilla.javascript.ScriptableObject;
+import org.mozilla.javascript.annotations.JSConstructor;
+import org.mozilla.javascript.annotations.JSFunction;
+import org.mozilla.javascript.annotations.JSGetter;
 import org.mozilla.javascript.tools.shell.Global;
 
 /**
@@ -110,34 +114,25 @@ public class App
         	
         });
         
-        Thread t1 = new Thread(new RunnableScript(global, "var t1 = new DB('db','t1Name'); print('created: '+t1.getName());"));
-        Thread t2 = new Thread(new RunnableScript(global, "var t2 = new DB('db','t2Name'); print('created: '+t2.getName());"));
-        Thread t3 = new Thread(new RunnableScript(global, "print('*****'); print(t1.getName()); print(t2.getName());"));
+        ScriptableObject.defineClass(global, Counter.class);
+//        Thread t1 = new Thread(new RunnableScript(global, "var t1 = new DB('db','t1Name'); print('created: '+t1.getName());"));
+//        Thread t2 = new Thread(new RunnableScript(global, "var t2 = new DB('db','t2Name'); print('created: '+t2.getName());"));
+//        Thread t3 = new Thread(new RunnableScript(global, "print('*****'); print(t1.getName()); print(t2.getName());"));
         
-        t1.run();
-        t2.run();
-        t3.run();
-        t1.join();
-        t2.join();
-        t3.join();
+        Thread t = new Thread(new RunnableScript(global,
+        		"c = new Counter(10); print(c.count); print(c.count); print(c.count); c.resetCount(); print(c.count);" +
+        		"print(c.dynamic);print(c.dynamic);"));
         
-        long start = System.nanoTime();
-        for(int i = 0; i < 10000; i++) {
-        	String result = new StringBuilder("testDB").append(".").append("testColl").toString();
-        }
-        System.out.println(System.nanoTime() - start);
+        t.run();
+        t.join();
         
-        start = System.nanoTime();
-        for(int i = 0; i < 10000; i++) {
-        	String result = "testDB" + "." + "testColl";
-        }
-        System.out.println(System.nanoTime() - start);
+//        t1.run();
+//        t2.run();
+//        t3.run();
+//        t1.join();
+//        t2.join();
+//        t3.join();
         
-        start = System.nanoTime();
-        for(int i = 0; i < 10000; i++) {
-        	String result = String.format("%s.%s", "testDB", "testColl");
-        }
-        System.out.println(System.nanoTime() - start);
     }
 
 	protected static Reader loadFromClasspath(String filePath) {
@@ -165,5 +160,49 @@ public class App
 			return cx.evaluateString(scope, script, "ThreadedScript", 0, null);
 		}
 		
+	}
+	
+
+
+	 public static class Counter extends ScriptableObject {
+	    private static final long serialVersionUID = 438270592527335642L;
+	
+	    // The zero-argument constructor used by Rhino runtime to create instances
+	    public Counter() { }
+	
+	    // @JSConstructor annotation defines the JavaScript constructor
+	    @JSConstructor
+	    public Counter(int a) { count = a; }
+	
+	    // The class name is defined by the getClassName method
+	    @Override
+	    public String getClassName() { return "Counter"; }
+	
+	    // The method getCount defines the count property.
+	    @JSGetter
+	    public int getCount() { return count++; }
+	
+	    // Methods can be defined the @JSFunction annotation.
+	    // Here we define resetCount for JavaScript.
+	    @JSFunction
+	    public void resetCount() { count = 0; }
+	    
+	    /* (non-Javadoc)
+		 * @see org.mozilla.javascript.ScriptableObject#get(java.lang.String, org.mozilla.javascript.Scriptable)
+		 */
+		@Override
+		public Object get(String name, Scriptable start) {
+			Object got = super.get(name, start);
+			if((got == ScriptableObject.NOT_FOUND)
+					&& this.equals(start)
+					&& !ScriptableObject.hasProperty(this, name)) {
+				got = "newProperty-" + name;
+				System.out.println("made new property: " + got.toString());
+				put(name, this, got);
+			}
+			return got;
+		}
+
+		private int count;
 	}
 }

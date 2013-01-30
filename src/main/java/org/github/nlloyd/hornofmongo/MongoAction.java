@@ -21,7 +21,6 @@
  */
 package org.github.nlloyd.hornofmongo;
 
-import org.github.nlloyd.hornofmongo.scope.MongoScope;
 import org.mozilla.javascript.ContextAction;
 import org.mozilla.javascript.Scriptable;
 
