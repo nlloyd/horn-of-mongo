@@ -71,7 +71,8 @@ public class Mongo extends ScriptableObject {
 	@JSFunction
 	public Object find(final String ns , final Object query , final Object fields , int limit , int skip , int batchSize , int options) {
 		System.out.printf("find(%s, %s, %s, %d, %d, %d, %d)\n", ns, query, fields, limit, skip, batchSize, options);
-		
+
+        BSONizer.convertJStoBSON(((Scriptable)query));
 		String[] nsBits = ns.split(".");
 		// TODO some sort of assertion that nsBits.length == 2?
 		com.mongodb.DB db = innerMongo.getDB(nsBits[0]);
@@ -84,7 +85,7 @@ public class Mongo extends ScriptableObject {
 	public void insert(final String ns, Object query) {
 		String str = query.toString();
 		System.out.printf("insert(%s, %s)\n", ns, str);
-		System.out.println(BSONizer.convertJStoBSON(((Scriptable)query)).toString());
+		BSONizer.convertJStoBSON(((Scriptable)query));
 	}
 	
 	@JSFunction

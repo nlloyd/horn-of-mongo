@@ -42,12 +42,13 @@ public class MongoShell {
 				return cx.evaluateString(
 						mongoScope, 
 						"var db = connect('shell_test',null,null); print('connected to: ' + db._name); " +
-						"db.test.insert({" +
-						"'a': 1, " +
-						"'today': new Date(), " +
-						"'isotoday': new ISODate(), " +
-//						"$tstamp: new Date(), " +
-						"'array': [1,2,'3']" +
+						"db.test.findOne({" +
+						"'a': {$regex: /abc.*def/i}" +
+//						"db.test.insert({" +
+//						"'a': 1, " +
+//						"'today': new Date(), " +
+//						"'isotoday': new ISODate(), " +
+//						"'array': [1,2,'3']" +
 						"});",
 						"shell", 
 						0, 

@@ -21,8 +21,13 @@
  */
 package org.github.nlloyd.hornofmongo.util;
 
+import java.util.regex.Pattern;
+
+import org.mozilla.javascript.Context;
+import org.mozilla.javascript.NativeArray;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
+import org.mozilla.javascript.regexp.NativeRegExp;
 
 import com.mongodb.BasicDBObject;
 
@@ -34,18 +39,30 @@ public class BSONizer {
 
 	public static Object convertJStoBSON( Scriptable jsObject )
 	{
-		Object bsonResult;
-		if(jsObject instanceof ScriptableObject) {
-			BasicDBObject bson = new BasicDBObject();
-			bsonResult = bson;
+		Object bsonResult = null;
+		if(jsObject instanceof NativeArray) {
+		    NativeArray array = (NativeArray)jsObject;
+		    for(Object entry : array) {
+		        System.out.println(entry.toString());
+		    }
+        } else if(jsObject instanceof NativeRegExp) {
+            System.out.println(jsObject.toString());
+            Object out = Context.jsToJava(jsObject, String.class);
+            System.err.println(out);
+		} else if(jsObject instanceof ScriptableObject) {
+		    System.out.println(jsObject.getClassName());
+//			BasicDBObject bson = new BasicDBObject();
+//			bsonResult = bson;
 
 			Object[] ids = ((ScriptableObject)jsObject).getAllIds();
 			for( Object id : ids )
 			{
 				String key = id.toString();
 				Object value = ScriptableObject.getProperty(jsObject,key);
-				System.out.printf("obj has: %s -> %s\n", key, value.toString());
-				bson.put( key, value );
+				System.out.printf("obj has: %s -> %s of type %s\n", key, value.toString(), value.getClass().getSimpleName());
+				if(value instanceof Scriptable)
+				    convertJStoBSON((Scriptable)value);
+//				bson.put( key, value );
 			}
 		} else {
 			// TODO throw an exception?
