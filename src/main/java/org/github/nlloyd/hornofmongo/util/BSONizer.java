@@ -1,5 +1,5 @@
 /**
- *  Copyright (c) 2012 Nick Lloyd
+ *  Copyright (c) 2013 Nick Lloyd
  *  
  *  Permission is hereby granted, free of charge, to any person obtaining a copy
  *  of this software and associated documentation files (the "Software"), to deal
@@ -19,42 +19,41 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-package org.github.nlloyd.hornofmongo;
+package org.github.nlloyd.hornofmongo.util;
 
-import java.net.UnknownHostException;
+import org.mozilla.javascript.Scriptable;
+import org.mozilla.javascript.ScriptableObject;
 
-import org.mozilla.javascript.Context;
+import com.mongodb.BasicDBObject;
 
 /**
  * @author nlloyd
  *
  */
-public class MongoShell {
-	
-	/**
-	 * @param args
-	 * @throws UnknownHostException 
-	 */
-	public static void main(String[] args) throws UnknownHostException {
-		MongoRuntime.call(new MongoAction() {
+public class BSONizer {
 
-			public Object run(Context cx) {
-				return cx.evaluateString(
-						mongoScope, 
-						"var db = connect('shell_test',null,null); print('connected to: ' + db._name); " +
-						"db.test.insert({" +
-						"'a': 1, " +
-						"'today': new Date(), " +
-						"'isotoday': new ISODate(), " +
-//						"$tstamp: new Date(), " +
-						"'array': [1,2,'3']" +
-						"});",
-						"shell", 
-						0, 
-						null);
+	public static Object convertJStoBSON( Scriptable jsObject )
+	{
+		Object bsonResult;
+		if(jsObject instanceof ScriptableObject) {
+			BasicDBObject bson = new BasicDBObject();
+			bsonResult = bson;
+
+			Object[] ids = ((ScriptableObject)jsObject).getAllIds();
+			for( Object id : ids )
+			{
+				String key = id.toString();
+				Object value = ScriptableObject.getProperty(jsObject,key);
+				System.out.printf("obj has: %s -> %s\n", key, value.toString());
+				bson.put( key, value );
 			}
-			
-		});
+		} else {
+			// TODO throw an exception?
+			bsonResult = null;
+		}
+		
+		return bsonResult;
 	}
 
+	
 }

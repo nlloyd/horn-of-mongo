@@ -2,6 +2,8 @@ package org.github.nlloyd.hornofmongo.adaptor;
 
 import java.net.UnknownHostException;
 
+import org.github.nlloyd.hornofmongo.util.BSONizer;
+import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
 import org.mozilla.javascript.Undefined;
 import org.mozilla.javascript.annotations.JSConstructor;
@@ -80,7 +82,9 @@ public class Mongo extends ScriptableObject {
 	
 	@JSFunction
 	public void insert(final String ns, Object query) {
-		System.out.printf("insert(%s, %s)\n", ns, query);
+		String str = query.toString();
+		System.out.printf("insert(%s, %s)\n", ns, str);
+		System.out.println(BSONizer.convertJStoBSON(((Scriptable)query)).toString());
 	}
 	
 	@JSFunction
