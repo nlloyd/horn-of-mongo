@@ -61,5 +61,9 @@ public class ObjectId extends ScriptableObject {
 	public String toString() {
 		return realObjectId.toString();
 	}
+	
+	public org.bson.types.ObjectId getWrappedObjectId() {
+		return realObjectId;
+	}
 
 }

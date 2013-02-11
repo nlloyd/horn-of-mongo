@@ -10,6 +10,8 @@ import org.mozilla.javascript.annotations.JSConstructor;
 import org.mozilla.javascript.annotations.JSFunction;
 
 import com.mongodb.DBCollection;
+import com.mongodb.DBCursor;
+import com.mongodb.DBObject;
 
 /**
  * JavaScript host Mongo object that acts as an adaptor between the
@@ -72,11 +74,19 @@ public class Mongo extends ScriptableObject {
 	public Object find(final String ns , final Object query , final Object fields , int limit , int skip , int batchSize , int options) {
 		System.out.printf("find(%s, %s, %s, %d, %d, %d, %d)\n", ns, query, fields, limit, skip, batchSize, options);
 
-        BSONizer.convertJStoBSON(((Scriptable)query));
-		String[] nsBits = ns.split(".");
-		// TODO some sort of assertion that nsBits.length == 2?
-		com.mongodb.DB db = innerMongo.getDB(nsBits[0]);
-		DBCollection collection = db.getCollection(nsBits[1]);
+        Object rawQuery = BSONizer.convertJStoBSON(query);
+        Object rawFields = BSONizer.convertJStoBSON(fields);
+        // TODO assert that rawQuery and rawFields are DBObject instances?
+        DBObject bsonQuery = null;
+        DBObject bsonFields = null;
+        if(rawQuery instanceof DBObject)
+        	bsonQuery = (DBObject)rawQuery;
+        if(rawFields instanceof DBObject)
+        	bsonFields = (DBObject)rawFields;
+		// TODO some sort of assertion that ns contains a '.'?
+		com.mongodb.DB db = innerMongo.getDB(ns.substring(0, ns.indexOf('.')));
+		DBCollection collection = db.getCollection(ns.substring(ns.lastIndexOf(',') + 1));
+		DBCursor cursor = collection.find(bsonQuery, bsonFields, skip, batchSize, options);
 		
 		return null;
 	}

@@ -25,6 +25,13 @@ import java.net.UnknownHostException;
 
 import org.mozilla.javascript.Context;
 
+import com.mongodb.BasicDBObject;
+import com.mongodb.DB;
+import com.mongodb.DBCollection;
+import com.mongodb.DBCursor;
+import com.mongodb.DBObject;
+import com.mongodb.Mongo;
+
 /**
  * @author nlloyd
  *
@@ -36,6 +43,22 @@ public class MongoShell {
 	 * @throws UnknownHostException 
 	 */
 	public static void main(String[] args) throws UnknownHostException {
+//		Mongo mongo = new Mongo();
+//		DB db = mongo.getDB("test");
+//		DBCollection c = db.getCollection("test");
+//		DBObject regex = new BasicDBObject("$regex", "testErson.*_[14]+$").append("$options", "");
+//		DBObject query = new BasicDBObject("b", regex);
+//		DBCursor cur = c.find(query);
+//		try {
+//			while(cur.hasNext()) {
+//				System.out.println(cur.next());
+//			}
+//		} finally {
+//			cur.close();
+//		}
+		
+//		System.err.println("------------------");
+		
 		MongoRuntime.call(new MongoAction() {
 
 			public Object run(Context cx) {
@@ -43,7 +66,7 @@ public class MongoShell {
 						mongoScope, 
 						"var db = connect('shell_test',null,null); print('connected to: ' + db._name); " +
 						"db.test.findOne({" +
-						"'a': {$regex: /abc.*def/i}" +
+						"'a': /abc.*def/im" +
 //						"db.test.insert({" +
 //						"'a': 1, " +
 //						"'today': new Date(), " +
