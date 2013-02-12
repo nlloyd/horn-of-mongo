@@ -23,6 +23,7 @@ package org.github.nlloyd.hornofmongo;
 
 import java.net.UnknownHostException;
 
+import org.github.nlloyd.hornofmongo.action.MongoAction;
 import org.mozilla.javascript.Context;
 
 import com.mongodb.BasicDBObject;

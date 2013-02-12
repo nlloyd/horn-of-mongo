@@ -3,7 +3,6 @@ package org.github.nlloyd.hornofmongo.adaptor;
 import java.net.UnknownHostException;
 
 import org.github.nlloyd.hornofmongo.util.BSONizer;
-import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
 import org.mozilla.javascript.Undefined;
 import org.mozilla.javascript.annotations.JSConstructor;
@@ -85,27 +84,60 @@ public class Mongo extends ScriptableObject {
         	bsonFields = (DBObject)rawFields;
 		// TODO some sort of assertion that ns contains a '.'?
 		com.mongodb.DB db = innerMongo.getDB(ns.substring(0, ns.indexOf('.')));
-		DBCollection collection = db.getCollection(ns.substring(ns.lastIndexOf(',') + 1));
-		DBCursor cursor = collection.find(bsonQuery, bsonFields, skip, batchSize, options);
-		
-		return null;
+		DBCollection collection = db.getCollection(ns.substring(ns.lastIndexOf('.') + 1));
+		DBCursor cursor = collection.find(bsonQuery, bsonFields).skip(skip).limit(limit).batchSize(batchSize).addOption(options);
+		return cursor;
 	}
 	
 	@JSFunction
-	public void insert(final String ns, Object query) {
-		String str = query.toString();
+	public void insert(final String ns, Object obj) {
+		String str = obj.toString();
 		System.out.printf("insert(%s, %s)\n", ns, str);
-		BSONizer.convertJStoBSON(((Scriptable)query));
+		
+        Object rawObj = BSONizer.convertJStoBSON(obj);
+        // TODO assert that rawQuery and rawFields are DBObject instances?
+        DBObject bsonObj = null;
+        if(rawObj instanceof DBObject)
+        	bsonObj = (DBObject)rawObj;
+		// TODO some sort of assertion that ns contains a '.'?
+		com.mongodb.DB db = innerMongo.getDB(ns.substring(0, ns.indexOf('.')));
+		DBCollection collection = db.getCollection(ns.substring(ns.lastIndexOf('.') + 1));
+		collection.insert(bsonObj);
 	}
 	
 	@JSFunction
 	public void remove(final String ns, Object pattern) {
-		System.out.printf("remove(%s, %s)\n", ns, pattern);
+		String str = pattern.toString();
+		System.out.printf("remove(%s, %s)\n", ns, str);
+		
+        Object rawPattern = BSONizer.convertJStoBSON(pattern);
+        // TODO assert that rawQuery and rawFields are DBObject instances?
+        DBObject bsonPattern = null;
+        if(rawPattern instanceof DBObject)
+        	bsonPattern = (DBObject)rawPattern;
+		// TODO some sort of assertion that ns contains a '.'?
+		com.mongodb.DB db = innerMongo.getDB(ns.substring(0, ns.indexOf('.')));
+		DBCollection collection = db.getCollection(ns.substring(ns.lastIndexOf('.') + 1));
+		collection.remove(bsonPattern);
 	}
 	
 	@JSFunction
 	public void update(final String ns, Object query, Object obj, boolean upsert) {
 		System.out.printf("update(%s, %s, %s, %b)\n", ns, query, obj, upsert);
+
+        Object rawQuery = BSONizer.convertJStoBSON(query);
+        Object rawObj = BSONizer.convertJStoBSON(obj);
+        // TODO assert that rawQuery and rawFields are DBObject instances?
+        DBObject bsonQuery = null;
+        DBObject bsonObj = null;
+        if(rawQuery instanceof DBObject)
+        	bsonQuery = (DBObject)rawQuery;
+        if(rawObj instanceof DBObject)
+        	bsonObj = (DBObject)rawObj;
+		// TODO some sort of assertion that ns contains a '.'?
+		com.mongodb.DB db = innerMongo.getDB(ns.substring(0, ns.indexOf('.')));
+		DBCollection collection = db.getCollection(ns.substring(ns.lastIndexOf('.') + 1));
+		collection.update(bsonQuery, bsonObj, upsert, false);
 	}
 	
 }

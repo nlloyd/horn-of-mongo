@@ -23,6 +23,7 @@ package org.github.nlloyd.hornofmongo;
 
 import java.lang.reflect.InvocationTargetException;
 
+import org.github.nlloyd.hornofmongo.action.MongoAction;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ContextAction;
 import org.mozilla.javascript.ContextFactory;

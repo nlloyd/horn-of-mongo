@@ -22,8 +22,8 @@
 package org.github.nlloyd.hornofmongo.adaptor;
 
 import org.apache.commons.lang3.StringUtils;
-import org.github.nlloyd.hornofmongo.MongoAction;
 import org.github.nlloyd.hornofmongo.MongoRuntime;
+import org.github.nlloyd.hornofmongo.action.MongoAction;
 import org.github.nlloyd.hornofmongo.exception.MongoScopeException;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Function;
