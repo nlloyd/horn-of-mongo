@@ -61,7 +61,7 @@ public class BinData extends ScriptableObject {
 	 */
 	@Override
 	public String getClassName() {
-		return "BinData";
+		return this.getClass().getSimpleName();
 	}
 	
 	@JSFunction

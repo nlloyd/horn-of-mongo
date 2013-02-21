@@ -30,11 +30,14 @@ import java.lang.reflect.InvocationTargetException;
 import org.apache.log4j.Logger;
 import org.github.nlloyd.hornofmongo.adaptor.BinData;
 import org.github.nlloyd.hornofmongo.adaptor.DB;
+import org.github.nlloyd.hornofmongo.adaptor.DBQuery;
+import org.github.nlloyd.hornofmongo.adaptor.InternalCursor;
 import org.github.nlloyd.hornofmongo.adaptor.Mongo;
 import org.github.nlloyd.hornofmongo.adaptor.NumberInt;
 import org.github.nlloyd.hornofmongo.adaptor.NumberLong;
 import org.github.nlloyd.hornofmongo.adaptor.ObjectId;
 import org.mozilla.javascript.Context;
+import org.mozilla.javascript.JavaScriptException;
 import org.mozilla.javascript.ScriptableObject;
 import org.mozilla.javascript.ast.Scope;
 import org.mozilla.javascript.tools.shell.Global;
@@ -86,6 +89,8 @@ public class MongoScope extends Global {
 		ScriptableObject.defineClass(this, Mongo.class, false, false);
 		ScriptableObject.defineClass(this, ObjectId.class, false, false);
 		ScriptableObject.defineClass(this, DB.class, false, false);
+		ScriptableObject.defineClass(this, InternalCursor.class, false, false);
+		ScriptableObject.defineClass(this, DBQuery.class, false, false);
 		ScriptableObject.defineClass(this, BinData.class, false, false);
 		
 		ScriptableObject.defineClass(this, NumberLong.class, false, false);
@@ -125,6 +130,8 @@ public class MongoScope extends Global {
 						jsSetupFile, 0, null);
 			} catch (IOException e) {
 				logger.error("Caught IOException attempting to load from classpath: " + jsSetupFile, e);
+			} catch (JavaScriptException e) {
+				logger.error("Caught JavaScriptException attempting to load from classpath: " + jsSetupFile, e);
 			}
 		}
 	}

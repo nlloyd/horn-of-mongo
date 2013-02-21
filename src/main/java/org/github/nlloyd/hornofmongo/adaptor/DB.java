@@ -23,10 +23,8 @@ package org.github.nlloyd.hornofmongo.adaptor;
 
 import org.apache.commons.lang3.StringUtils;
 import org.github.nlloyd.hornofmongo.MongoRuntime;
-import org.github.nlloyd.hornofmongo.action.MongoAction;
-import org.github.nlloyd.hornofmongo.exception.MongoScopeException;
+import org.github.nlloyd.hornofmongo.action.NewInstanceAction;
 import org.mozilla.javascript.Context;
-import org.mozilla.javascript.Function;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
 import org.mozilla.javascript.annotations.JSConstructor;
@@ -80,7 +78,7 @@ public class DB extends ScriptableObject {
 	 */
 	@Override
 	public String getClassName() {
-		return "DB";
+		return this.getClass().getSimpleName();
 	}
 	
 	/**
@@ -96,7 +94,12 @@ public class DB extends ScriptableObject {
 				&& this.equals(start)
 				&& !isSpecialName(name)
 				&& !ScriptableObject.hasProperty(this, name)) {
-			property = MongoRuntime.call(new DBCollectionConstructor(mongo, this, name));
+			property = MongoRuntime.call(new NewInstanceAction("DBCollection", new Object[]{
+	    			mongo, 
+	    			this, 
+	    			Context.toString(name), 
+	    			Context.toString(this.name + "." + name)
+			}));
 			this.put(name, this, property);
 		}
 		return property;
@@ -114,40 +117,5 @@ public class DB extends ScriptableObject {
     	
     	return isSpecial;
     }
-
-
-	private class DBCollectionConstructor extends MongoAction {
-
-		Mongo mongo;
-		DB db;
-		String shortName;
-		String fullName;
-		
-		public DBCollectionConstructor(Mongo mongo, DB db, String name) {
-			this.mongo = mongo;
-			this.db = db;
-			this.shortName = name;
-			this.fullName = db.name + "." + name;
-		}
-
-		public Object run(Context cx) {
-			Object dbc = mongoScope.get("DBCollection", mongoScope);
-			if((dbc != null) && (dbc instanceof Function)) {
-				Function dbcc = (Function)dbc;
-		        Scriptable newCollection = dbcc.construct(cx, mongoScope, 
-		        		new Object[]{
-		        			mongo, 
-		        			db, 
-		        			Context.toString(shortName), 
-		        			Context.toString(fullName)
-		        			});
-		        return newCollection;
-			} else {
-				throw new MongoScopeException("MongoDB JS API function named DB not found!  " +
-						"MongoScope is either not being used or is not initialized.");
-			}
-		}
-		
-	}
 
 }

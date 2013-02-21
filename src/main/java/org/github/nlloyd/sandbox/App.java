@@ -26,9 +26,11 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
 
+import org.bson.BSON;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ContextAction;
 import org.mozilla.javascript.ContextFactory;
+import org.mozilla.javascript.NativeObject;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
 import org.mozilla.javascript.annotations.JSConstructor;
@@ -64,6 +66,11 @@ public class App
 	
     public static void main( String[] args ) throws Exception
     {
+    	String flags = "cdgimstux";
+    	String reFlags = BSON.regexFlags(BSON.regexFlags(flags));
+    	System.out.println(flags);
+    	System.out.println(reFlags);
+    	
 ////        ContextFactory cxf = new ContextFactory();
 //        Context cx = Context.enter();
 //        Global global = new Global(cx);
@@ -113,7 +120,19 @@ public class App
 			}
         	
         });
-        
+
+		ScriptableObject.defineProperty(global, "something2", new NativeObject(), 0);
+    	
+    	Object empty = ContextFactory.getGlobal().call(new ContextAction() {
+    		public Object run(Context cx) {
+    			Object result = cx.evaluateString(global, "var something = {}; print(something); print(something2);", "blah", 0, null);
+    			return result;
+    		}
+    	});
+		
+		
+    	System.out.println(Context.toString(empty));
+    	
         ScriptableObject.defineClass(global, Counter.class);
 //        Thread t1 = new Thread(new RunnableScript(global, "var t1 = new DB('db','t1Name'); print('created: '+t1.getName());"));
 //        Thread t2 = new Thread(new RunnableScript(global, "var t2 = new DB('db','t2Name'); print('created: '+t2.getName());"));

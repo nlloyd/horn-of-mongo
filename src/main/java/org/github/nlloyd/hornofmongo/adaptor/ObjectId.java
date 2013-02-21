@@ -25,6 +25,8 @@ import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ScriptableObject;
 import org.mozilla.javascript.annotations.JSConstructor;
 import org.mozilla.javascript.annotations.JSFunction;
+import org.mozilla.javascript.annotations.JSGetter;
+import org.mozilla.javascript.annotations.JSSetter;
 
 /**
  * @author nlloyd
@@ -38,28 +40,37 @@ public class ObjectId extends ScriptableObject {
 	 * 
 	 */
 	private static final long serialVersionUID = 5594412197023274036L;
+	
+	@JSConstructor
+	public ObjectId() {
+		super();
+		realObjectId = new org.bson.types.ObjectId();
+	}
+	
+	@JSConstructor
+	public ObjectId(Object obj) {
+		super();
+		String str = Context.toString(obj);
+		realObjectId = new org.bson.types.ObjectId(str);
+	}
+	
+	public ObjectId(org.bson.types.ObjectId oid) {
+		realObjectId = oid;
+	}
 
 	@Override
 	public String getClassName() {
 		return this.getClass().getSimpleName();
 	}
 	
-	@JSConstructor
-	public ObjectId() {
-		realObjectId = new org.bson.types.ObjectId();
-		put("str", this, realObjectId.toString());
+	@JSSetter
+	public void setStr(Object obj) {
+		this.realObjectId = new org.bson.types.ObjectId(Context.toString(obj));
 	}
 	
-	@JSConstructor
-	public ObjectId(Object obj) {
-		String str = Context.toString(obj);
-		realObjectId = new org.bson.types.ObjectId(str);
-		put("str", this, realObjectId.toString());
-	}
-	
-	@JSFunction
-	public String toString() {
-		return realObjectId.toString();
+	@JSGetter
+	public Object getStr() {
+		return Context.toString(this.realObjectId.toString());
 	}
 	
 	public org.bson.types.ObjectId getWrappedObjectId() {

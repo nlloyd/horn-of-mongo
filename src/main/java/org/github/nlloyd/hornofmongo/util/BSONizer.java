@@ -22,8 +22,14 @@
 package org.github.nlloyd.hornofmongo.util;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.regex.Pattern;
 
+import org.bson.BSONObject;
+import org.bson.types.Symbol;
+import org.github.nlloyd.hornofmongo.MongoRuntime;
+import org.github.nlloyd.hornofmongo.action.NewInstanceAction;
 import org.github.nlloyd.hornofmongo.adaptor.ObjectId;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.NativeArray;
@@ -32,6 +38,7 @@ import org.mozilla.javascript.ScriptableObject;
 import org.mozilla.javascript.regexp.NativeRegExp;
 
 import com.mongodb.BasicDBObject;
+import com.mongodb.Bytes;
 import com.mongodb.DBObject;
 
 /**
@@ -91,5 +98,42 @@ public class BSONizer {
 		return bsonObject;
 	}
 
-	
+	public static Object convertBSONtoJS(Object bsonObject) {
+		Object jsObject = null;
+		if(bsonObject instanceof List<?>) {
+			List<?> bsonList = (List<?>)bsonObject;
+			Scriptable jsArray = (Scriptable)MongoRuntime.call(new NewInstanceAction(bsonList.size()));
+
+			int index = 0;
+			for(Object bsonEntry : bsonList)
+				ScriptableObject.putProperty(jsArray, index, convertBSONtoJS(bsonEntry));
+			
+			jsObject = jsArray;
+		} else if(bsonObject instanceof BSONObject) {
+			Scriptable jsObj = (Scriptable)MongoRuntime.call(new NewInstanceAction());
+			BSONObject  bsonObj = (BSONObject)bsonObject;
+			
+			for(String key : bsonObj.keySet()) {
+				Object value = convertBSONtoJS(bsonObj.get(key));
+				ScriptableObject.putProperty(jsObj, key, value);
+			}
+			jsObject = jsObj;
+		} else if(bsonObject instanceof Symbol) {
+			jsObject = ((Symbol)bsonObject).getSymbol();
+		} else if(bsonObject instanceof Date) {
+			jsObject = MongoRuntime.call(new NewInstanceAction("Date", new Object[]{((Date)bsonObject).getTime()}));
+		} else if(bsonObject instanceof Pattern) {
+			Pattern regex = (Pattern)bsonObject;
+			String source = regex.pattern();
+			String options = Bytes.regexFlags(regex.flags());
+			jsObject = MongoRuntime.call(new NewInstanceAction("RegExp", new Object[]{source, options}));
+		} else if(bsonObject instanceof org.bson.types.ObjectId) {
+			jsObject = new ObjectId((org.bson.types.ObjectId)bsonObject);
+		} else {
+			// TODO throw an exception?
+			bsonObject = null;
+		}
+		
+		return jsObject;
+	}
 }

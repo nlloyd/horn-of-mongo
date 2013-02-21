@@ -21,10 +21,18 @@
  */
 package org.github.nlloyd.hornofmongo.action;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.Reader;
+
 import org.apache.commons.lang3.StringUtils;
-import org.github.nlloyd.hornofmongo.MongoRuntime;
 import org.github.nlloyd.hornofmongo.MongoScope;
 import org.mozilla.javascript.Context;
+
+import com.mongodb.MongoException;
 
 /**
  * A concrete implementation of {@link MongoAction} that wraps a JavaScript script 
@@ -35,14 +43,92 @@ import org.mozilla.javascript.Context;
  */
 public class MongoScriptAction extends MongoAction {
 	
+	protected String scriptName = "anon";
 	protected String scriptString = null;
+	protected Reader scriptReader = null;
 	
-	public MongoScriptAction() {
+	public MongoScriptAction(String script) {
 		super();
+		this.scriptString = script;
 	}
 	
-	public MongoScriptAction(MongoScope mongoScope) {
+	public MongoScriptAction(File script) {
+		super();
+		this.scriptName = script.getName();
+		try {
+			this.scriptReader = new BufferedReader(new FileReader(script));
+		} catch (FileNotFoundException e) {
+			throw new MongoException("Attempted to execute non-existent file " + script.getAbsolutePath(), e);
+		}
+	}
+	
+	public MongoScriptAction(Reader script) {
+		super();
+		this.scriptReader = script;
+	}
+	
+	public MongoScriptAction(String name, String script) {
+		super();
+		this.scriptName = name;
+		this.scriptString = script;
+	}
+	
+	public MongoScriptAction(String name, File script) {
+		super();
+		this.scriptName = name;
+		try {
+			this.scriptReader = new BufferedReader(new FileReader(script));
+		} catch (FileNotFoundException e) {
+			throw new MongoException("Attempted to execute non-existent file " + script.getAbsolutePath(), e);
+		}
+	}
+	
+	public MongoScriptAction(String name, Reader script) {
+		super();
+		this.scriptName = name;
+		this.scriptReader = script;
+	}
+	
+	public MongoScriptAction(MongoScope mongoScope, String script) {
 		super(mongoScope);
+		this.scriptString = script;
+	}
+	
+	public MongoScriptAction(MongoScope mongoScope, File script) {
+		super(mongoScope);
+		this.scriptName = script.getName();
+		try {
+			this.scriptReader = new BufferedReader(new FileReader(script));
+		} catch (FileNotFoundException e) {
+			throw new MongoException("Attempted to execute non-existent file " + script.getAbsolutePath(), e);
+		}
+	}
+	
+	public MongoScriptAction(MongoScope mongoScope, Reader script) {
+		super(mongoScope);
+		this.scriptReader = script;
+	}
+	
+	public MongoScriptAction(MongoScope mongoScope, String name, String script) {
+		super(mongoScope);
+		this.scriptName = name;
+		this.scriptString = script;
+	}
+	
+	public MongoScriptAction(MongoScope mongoScope, String name, File script) {
+		super(mongoScope);
+		this.scriptName = name;
+		try {
+			this.scriptReader = new BufferedReader(new FileReader(script));
+		} catch (FileNotFoundException e) {
+			throw new MongoException("Attempted to execute non-existent file " + script.getAbsolutePath(), e);
+		}
+	}
+	
+	public MongoScriptAction(MongoScope mongoScope, String name, Reader script) {
+		super(mongoScope);
+		this.scriptName = name;
+		this.scriptReader = script;
 	}
 	
 	/**
@@ -53,21 +139,25 @@ public class MongoScriptAction extends MongoAction {
 	public Object run(Context cx) {
 		Object result = null;
 		if(StringUtils.isNotBlank(scriptString)) {
-		result =  cx.evaluateString(
-				mongoScope, 
-				"var db = connect('shell_test',null,null); print('connected to: ' + db._name); " +
-				"db.test.findOne({" +
-				"'a': /abc.*def/im" +
-//				"db.test.insert({" +
-//				"'a': 1, " +
-//				"'today': new Date(), " +
-//				"'isotoday': new ISODate(), " +
-//				"'array': [1,2,'3']" +
-				"});",
-				"shell", 
-				0, 
-				null);
+			result =  cx.evaluateString(
+					mongoScope, 
+					scriptString,
+					scriptName, 
+					0, 
+					null);
+		} else if(scriptReader != null) {
+			try {
+				result =  cx.evaluateReader(
+						mongoScope, 
+						scriptReader,
+						scriptName, 
+						0, 
+						null);
+			} catch (IOException e) {
+				throw new MongoException("IOException when executing a script in Reader form.", e);
+			}
 		}
+		// TODO throw exception if nothing to execute?
 		
 		return result;
 	}

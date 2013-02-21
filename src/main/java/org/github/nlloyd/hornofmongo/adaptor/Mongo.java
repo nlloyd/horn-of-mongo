@@ -2,7 +2,11 @@ package org.github.nlloyd.hornofmongo.adaptor;
 
 import java.net.UnknownHostException;
 
+import org.github.nlloyd.hornofmongo.MongoRuntime;
+import org.github.nlloyd.hornofmongo.action.MongoScriptAction;
+import org.github.nlloyd.hornofmongo.action.NewInstanceAction;
 import org.github.nlloyd.hornofmongo.util.BSONizer;
+import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
 import org.mozilla.javascript.Undefined;
 import org.mozilla.javascript.annotations.JSConstructor;
@@ -11,6 +15,7 @@ import org.mozilla.javascript.annotations.JSFunction;
 import com.mongodb.DBCollection;
 import com.mongodb.DBCursor;
 import com.mongodb.DBObject;
+import com.mongodb.MongoException;
 
 /**
  * JavaScript host Mongo object that acts as an adaptor between the
@@ -55,24 +60,16 @@ public class Mongo extends ScriptableObject {
 	 */
 	@Override
 	public String getClassName() {
-		return "Mongo";
+		return this.getClass().getSimpleName();
 	}
 	
 	// --- Mongo JavaScript function implementation ---
 	
-//if ( ! Mongo.prototype.find )
-//    Mongo.prototype.find = function( ns , query , fields , limit , skip , batchSize , options ){ throw "find not implemented"; }
-//if ( ! Mongo.prototype.insert )
-//    Mongo.prototype.insert = function( ns , obj ){ throw "insert not implemented"; }
-//if ( ! Mongo.prototype.remove )
-//    Mongo.prototype.remove = function( ns , pattern ){ throw "remove not implemented;" }
-//if ( ! Mongo.prototype.update )
-//    Mongo.prototype.update = function( ns , query , obj , upsert ){ throw "update not implemented;" }
-	
 	@JSFunction
 	public Object find(final String ns , final Object query , final Object fields , int limit , int skip , int batchSize , int options) {
 		System.out.printf("find(%s, %s, %s, %d, %d, %d, %d)\n", ns, query, fields, limit, skip, batchSize, options);
-
+		Object result = null;
+		
         Object rawQuery = BSONizer.convertJStoBSON(query);
         Object rawFields = BSONizer.convertJStoBSON(fields);
         // TODO assert that rawQuery and rawFields are DBObject instances?
@@ -84,9 +81,24 @@ public class Mongo extends ScriptableObject {
         	bsonFields = (DBObject)rawFields;
 		// TODO some sort of assertion that ns contains a '.'?
 		com.mongodb.DB db = innerMongo.getDB(ns.substring(0, ns.indexOf('.')));
-		DBCollection collection = db.getCollection(ns.substring(ns.lastIndexOf('.') + 1));
-		DBCursor cursor = collection.find(bsonQuery, bsonFields).skip(skip).limit(limit).batchSize(batchSize).addOption(options);
-		return cursor;
+		String collectionName = ns.substring(ns.lastIndexOf('.') + 1);
+		if("$cmd".equals(collectionName)) {
+			for(String queryKey : bsonQuery.keySet()) {
+				if(queryKey.equalsIgnoreCase("drop")) {
+					DBCollection toDrop = db.getCollection(bsonQuery.get(queryKey).toString());
+					toDrop.drop();
+					result = MongoRuntime.call(new NewInstanceAction("InternalCursor", new Object[]{true}));
+				}
+			}
+		} else {
+			DBCollection collection = db.getCollection(collectionName);
+			DBCursor cursor = collection.find(bsonQuery, bsonFields).skip(skip).limit(limit).batchSize(batchSize).addOption(options);
+			InternalCursor jsCursor = (InternalCursor)MongoRuntime.call(new NewInstanceAction("InternalCursor", new Object[]{true}));
+			jsCursor.setCursor(cursor);
+			result = jsCursor;
+		}
+		
+		return result;
 	}
 	
 	@JSFunction

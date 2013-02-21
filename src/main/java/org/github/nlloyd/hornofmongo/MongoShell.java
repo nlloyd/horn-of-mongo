@@ -44,19 +44,10 @@ public class MongoShell {
 	 * @throws UnknownHostException 
 	 */
 	public static void main(String[] args) throws UnknownHostException {
-//		Mongo mongo = new Mongo();
-//		DB db = mongo.getDB("test");
-//		DBCollection c = db.getCollection("test");
-//		DBObject regex = new BasicDBObject("$regex", "testErson.*_[14]+$").append("$options", "");
-//		DBObject query = new BasicDBObject("b", regex);
-//		DBCursor cur = c.find(query);
-//		try {
-//			while(cur.hasNext()) {
-//				System.out.println(cur.next());
-//			}
-//		} finally {
-//			cur.close();
-//		}
+		Mongo mongo = new Mongo();
+		DB db = mongo.getDB("test");
+		DBCollection c = db.getCollection("test");
+		DBObject one = c.findOne();
 		
 //		System.err.println("------------------");
 		
@@ -64,7 +55,7 @@ public class MongoShell {
 
 			public Object run(Context cx) {
 				return cx.evaluateString(
-						mongoScope, 
+						mongoScope,
 						"var db = connect('shell_test',null,null); print('connected to: ' + db._name); " +
 						"db.test.findOne({" +
 						"'a': /abc.*def/im" +

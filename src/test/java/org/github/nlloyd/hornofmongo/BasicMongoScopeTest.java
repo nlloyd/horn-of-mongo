@@ -21,8 +21,10 @@
  */
 package org.github.nlloyd.hornofmongo;
 
-import static org.junit.Assert.*;
+import java.io.File;
+import java.io.FilenameFilter;
 
+import org.github.nlloyd.hornofmongo.action.MongoScriptAction;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -34,12 +36,15 @@ import org.junit.Test;
  *
  */
 public class BasicMongoScopeTest {
+	
+	private static File cwd = null;
 
 	/**
 	 * @throws java.lang.Exception
 	 */
 	@BeforeClass
 	public static void setUpBeforeClass() throws Exception {
+		cwd = new File(System.getProperty("user.dir"), "target/test-classes");
 	}
 
 	/**
@@ -65,7 +70,21 @@ public class BasicMongoScopeTest {
 
 	@Test
 	public void test() {
-		fail("Not yet implemented");
+		File[] basics = cwd.listFiles(new FilenameFilter() {
+	
+			@Override
+			public boolean accept(File dir, String name) {
+				return name.startsWith("basic") && name.endsWith(".js");
+			}
+			
+		});
+		
+		MongoRuntime.call(new MongoScriptAction("connect", "var db = connect('test',null,null);"));
+		
+		for(File testScript : basics) {
+			System.out.println("--- executing test: " + testScript.getName());
+			MongoRuntime.call(new MongoScriptAction(testScript));
+		}
 	}
 
 }
