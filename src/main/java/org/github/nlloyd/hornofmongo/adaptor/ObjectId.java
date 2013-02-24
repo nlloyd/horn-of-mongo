@@ -23,8 +23,8 @@ package org.github.nlloyd.hornofmongo.adaptor;
 
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ScriptableObject;
+import org.mozilla.javascript.Undefined;
 import org.mozilla.javascript.annotations.JSConstructor;
-import org.mozilla.javascript.annotations.JSFunction;
 import org.mozilla.javascript.annotations.JSGetter;
 import org.mozilla.javascript.annotations.JSSetter;
 
@@ -50,8 +50,12 @@ public class ObjectId extends ScriptableObject {
 	@JSConstructor
 	public ObjectId(Object obj) {
 		super();
-		String str = Context.toString(obj);
-		realObjectId = new org.bson.types.ObjectId(str);
+		if(obj instanceof Undefined)
+			realObjectId = new org.bson.types.ObjectId();
+		else {
+			String str = Context.toString(obj);
+			realObjectId = new org.bson.types.ObjectId(str);
+		}
 	}
 	
 	public ObjectId(org.bson.types.ObjectId oid) {

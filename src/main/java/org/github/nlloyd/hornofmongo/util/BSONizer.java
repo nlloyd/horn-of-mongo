@@ -35,6 +35,7 @@ import org.mozilla.javascript.Context;
 import org.mozilla.javascript.NativeArray;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
+import org.mozilla.javascript.Undefined;
 import org.mozilla.javascript.regexp.NativeRegExp;
 
 import com.mongodb.BasicDBObject;
@@ -48,13 +49,6 @@ import com.mongodb.DBObject;
 public class BSONizer {
 	
 	public static Object convertJStoBSON(Object jsObject) {
-		if(jsObject instanceof Scriptable)
-			return convertJStoBSON((Scriptable)jsObject);
-		else
-			return jsObject;
-	}
-
-	public static Object convertJStoBSON(Scriptable jsObject) {
 		Object bsonObject = null;
 		if(jsObject instanceof NativeArray) {
 		    NativeArray jsArray = (NativeArray)jsObject;
@@ -65,7 +59,7 @@ public class BSONizer {
 		    bsonObject = bsonArray;
         } else if(jsObject instanceof NativeRegExp) {
         	DBObject bsonRegex = new BasicDBObject();
-            Object source = ScriptableObject.getProperty(jsObject, "source");
+            Object source = ScriptableObject.getProperty((Scriptable)jsObject, "source");
             String fullRegex = (String)Context.jsToJava(jsObject, String.class);
             String options = fullRegex.substring(fullRegex.lastIndexOf("/") + 1);
             
@@ -76,7 +70,6 @@ public class BSONizer {
         } else if(jsObject instanceof ObjectId) {
         	bsonObject = ((ObjectId)jsObject).getWrappedObjectId();
 		} else if(jsObject instanceof ScriptableObject) {
-		    System.out.println(jsObject.getClassName());
 			BasicDBObject bson = new BasicDBObject();
 			bsonObject = bson;
 
@@ -84,15 +77,16 @@ public class BSONizer {
 			for( Object id : ids )
 			{
 				String key = id.toString();
-				Object value = ScriptableObject.getProperty(jsObject,key);
+				Object value = ScriptableObject.getProperty((Scriptable)jsObject,key);
 				System.out.printf("obj has: %s -> %s of type %s\n", key, value.toString(), value.getClass().getSimpleName());
-				if(value instanceof Scriptable)
-				    value = convertJStoBSON(value);
+			    value = convertJStoBSON(value);
 				bson.put( key, value );
 			}
+		} else if(jsObject instanceof Undefined) {
+			bsonObject = null;
 		} else {
 			// TODO throw an exception?
-			bsonObject = null;
+			bsonObject = jsObject;
 		}
 		
 		return bsonObject;
@@ -130,8 +124,7 @@ public class BSONizer {
 		} else if(bsonObject instanceof org.bson.types.ObjectId) {
 			jsObject = new ObjectId((org.bson.types.ObjectId)bsonObject);
 		} else {
-			// TODO throw an exception?
-			bsonObject = null;
+			jsObject = bsonObject;
 		}
 		
 		return jsObject;

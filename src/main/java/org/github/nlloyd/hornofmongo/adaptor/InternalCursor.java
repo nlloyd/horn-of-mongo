@@ -21,11 +21,9 @@
  */
 package org.github.nlloyd.hornofmongo.adaptor;
 
-import org.github.nlloyd.hornofmongo.MongoRuntime;
-import org.github.nlloyd.hornofmongo.action.NewInstanceAction;
 import org.github.nlloyd.hornofmongo.util.BSONizer;
-import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
+import org.mozilla.javascript.Undefined;
 import org.mozilla.javascript.annotations.JSConstructor;
 import org.mozilla.javascript.annotations.JSFunction;
 
@@ -55,14 +53,14 @@ public class InternalCursor extends ScriptableObject {
 	public InternalCursor() {}
 	
 	@JSConstructor
-	public InternalCursor(boolean withFauxFindOneResult) {
+	public InternalCursor(Object obj) {
 		super();
-		if(withFauxFindOneResult) {
-			this.fauxFindOneResult = MongoRuntime.call(new NewInstanceAction("Object"));
-			ScriptableObject.putProperty((Scriptable)this.fauxFindOneResult, "ok", true);
-		}
+		if(obj instanceof DBCursor)
+			this.cursor = (DBCursor)obj;
+		else if(!(obj instanceof Undefined))
+			this.fauxFindOneResult = obj;
 	}
-
+	
 	/**
 	 * @see org.mozilla.javascript.ScriptableObject#getClassName()
 	 */

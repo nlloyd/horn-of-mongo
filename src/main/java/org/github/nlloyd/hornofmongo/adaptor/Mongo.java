@@ -3,19 +3,17 @@ package org.github.nlloyd.hornofmongo.adaptor;
 import java.net.UnknownHostException;
 
 import org.github.nlloyd.hornofmongo.MongoRuntime;
-import org.github.nlloyd.hornofmongo.action.MongoScriptAction;
 import org.github.nlloyd.hornofmongo.action.NewInstanceAction;
 import org.github.nlloyd.hornofmongo.util.BSONizer;
-import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
 import org.mozilla.javascript.Undefined;
 import org.mozilla.javascript.annotations.JSConstructor;
 import org.mozilla.javascript.annotations.JSFunction;
 
+import com.mongodb.CommandResult;
 import com.mongodb.DBCollection;
 import com.mongodb.DBCursor;
 import com.mongodb.DBObject;
-import com.mongodb.MongoException;
 
 /**
  * JavaScript host Mongo object that acts as an adaptor between the
@@ -79,22 +77,26 @@ public class Mongo extends ScriptableObject {
         	bsonQuery = (DBObject)rawQuery;
         if(rawFields instanceof DBObject)
         	bsonFields = (DBObject)rawFields;
-		// TODO some sort of assertion that ns contains a '.'?
 		com.mongodb.DB db = innerMongo.getDB(ns.substring(0, ns.indexOf('.')));
 		String collectionName = ns.substring(ns.lastIndexOf('.') + 1);
 		if("$cmd".equals(collectionName)) {
-			for(String queryKey : bsonQuery.keySet()) {
-				if(queryKey.equalsIgnoreCase("drop")) {
-					DBCollection toDrop = db.getCollection(bsonQuery.get(queryKey).toString());
-					toDrop.drop();
-					result = MongoRuntime.call(new NewInstanceAction("InternalCursor", new Object[]{true}));
-				}
-			}
+			CommandResult cmdResult = db.command(bsonQuery, options);
+			Object jsCmdResult = BSONizer.convertBSONtoJS(cmdResult);
+			result = MongoRuntime.call(new NewInstanceAction("InternalCursor", new Object[]{jsCmdResult}));
+//			for(String queryKey : bsonQuery.keySet()) {
+//				if(queryKey.equalsIgnoreCase("drop")) {
+//					DBCollection toDrop = db.getCollection(bsonQuery.get(queryKey).toString());
+//					toDrop.drop();
+//					result = MongoRuntime.call(new NewInstanceAction("InternalCursor", new Object[]{true}));
+//				} else if(queryKey.equalsIgnoreCase("validate")) {
+//					DBCollection toValidate = db.getCollection(bsonQuery.get(queryKey).toString());
+//					toValidate.getDB().
+//				}
+//			}
 		} else {
 			DBCollection collection = db.getCollection(collectionName);
 			DBCursor cursor = collection.find(bsonQuery, bsonFields).skip(skip).limit(limit).batchSize(batchSize).addOption(options);
-			InternalCursor jsCursor = (InternalCursor)MongoRuntime.call(new NewInstanceAction("InternalCursor", new Object[]{true}));
-			jsCursor.setCursor(cursor);
+			InternalCursor jsCursor = (InternalCursor)MongoRuntime.call(new NewInstanceAction("InternalCursor", new Object[]{cursor}));
 			result = jsCursor;
 		}
 		
