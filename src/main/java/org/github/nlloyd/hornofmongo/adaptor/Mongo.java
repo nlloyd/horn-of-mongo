@@ -10,6 +10,7 @@ import org.mozilla.javascript.Undefined;
 import org.mozilla.javascript.annotations.JSConstructor;
 import org.mozilla.javascript.annotations.JSFunction;
 
+import com.mongodb.BasicDBObject;
 import com.mongodb.CommandResult;
 import com.mongodb.DBCollection;
 import com.mongodb.DBCursor;
@@ -78,22 +79,14 @@ public class Mongo extends ScriptableObject {
         if(rawFields instanceof DBObject)
         	bsonFields = (DBObject)rawFields;
 		com.mongodb.DB db = innerMongo.getDB(ns.substring(0, ns.indexOf('.')));
-		String collectionName = ns.substring(ns.lastIndexOf('.') + 1);
+		String collectionName = ns.substring(ns.indexOf('.') + 1);
 		if("$cmd".equals(collectionName)) {
 			CommandResult cmdResult = db.command(bsonQuery, options);
 			Object jsCmdResult = BSONizer.convertBSONtoJS(cmdResult);
 			result = MongoRuntime.call(new NewInstanceAction("InternalCursor", new Object[]{jsCmdResult}));
-//			for(String queryKey : bsonQuery.keySet()) {
-//				if(queryKey.equalsIgnoreCase("drop")) {
-//					DBCollection toDrop = db.getCollection(bsonQuery.get(queryKey).toString());
-//					toDrop.drop();
-//					result = MongoRuntime.call(new NewInstanceAction("InternalCursor", new Object[]{true}));
-//				} else if(queryKey.equalsIgnoreCase("validate")) {
-//					DBCollection toValidate = db.getCollection(bsonQuery.get(queryKey).toString());
-//					toValidate.getDB().
-//				}
-//			}
 		} else {
+			if("$cmd.sys.inprog".equals(collectionName))
+				collectionName = "$cmd.sys.inprog";
 			DBCollection collection = db.getCollection(collectionName);
 			DBCursor cursor = collection.find(bsonQuery, bsonFields).skip(skip).limit(limit).batchSize(batchSize).addOption(options);
 			InternalCursor jsCursor = (InternalCursor)MongoRuntime.call(new NewInstanceAction("InternalCursor", new Object[]{cursor}));

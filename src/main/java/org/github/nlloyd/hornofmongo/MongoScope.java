@@ -30,6 +30,7 @@ import java.lang.reflect.InvocationTargetException;
 import org.apache.log4j.Logger;
 import org.github.nlloyd.hornofmongo.adaptor.BinData;
 import org.github.nlloyd.hornofmongo.adaptor.DB;
+import org.github.nlloyd.hornofmongo.adaptor.DBCollection;
 import org.github.nlloyd.hornofmongo.adaptor.DBQuery;
 import org.github.nlloyd.hornofmongo.adaptor.InternalCursor;
 import org.github.nlloyd.hornofmongo.adaptor.Mongo;
@@ -89,6 +90,7 @@ public class MongoScope extends Global {
 		ScriptableObject.defineClass(this, Mongo.class, false, false);
 		ScriptableObject.defineClass(this, ObjectId.class, false, false);
 		ScriptableObject.defineClass(this, DB.class, false, false);
+		ScriptableObject.defineClass(this, DBCollection.class, false, false);
 		ScriptableObject.defineClass(this, InternalCursor.class, false, false);
 		ScriptableObject.defineClass(this, DBQuery.class, false, false);
 		ScriptableObject.defineClass(this, BinData.class, false, false);

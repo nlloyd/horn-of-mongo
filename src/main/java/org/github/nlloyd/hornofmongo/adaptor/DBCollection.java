@@ -50,7 +50,8 @@ public class DBCollection extends ScriptableObject {
 
 	@JSConstructor
 	public DBCollection(Mongo mongo, DB db, String shortName, String fullName) {
-		this.mongo = null;
+		super();
+		this.mongo = mongo;
 		this.db = db;
 		this.shortName = shortName;
 		this.fullName = fullName;
@@ -58,7 +59,6 @@ public class DBCollection extends ScriptableObject {
 		put("_db", this, this.db);
 		put("_shortName", this, this.shortName);
 		put("_fullName", this, this.fullName);
-		ScriptableObject.callMethod(this, "verify", new Object[] {});
 	}
 
 	/**
@@ -79,15 +79,13 @@ public class DBCollection extends ScriptableObject {
 	@Override
 	public Object get(String name, Scriptable start) {
 		Object property = super.get(name, start);
-		if ((property == ScriptableObject.NOT_FOUND)
-				&& this.equals(start)
+		if ((property == ScriptableObject.NOT_FOUND) && this.equals(start)
 				&& !isSpecialName(name)
-				&& this.equals(ScriptableObject.getClassPrototype(
-						MongoRuntime.getMongoScope(), this.getClassName()))
 				&& !ScriptableObject.hasProperty(this, name)) {
+			String shortName = Context.toString(this.shortName + "." + name);
+			String fullName = Context.toString(this.db.name + "." + shortName);
 			property = MongoRuntime.call(new NewInstanceAction("DBCollection",
-					new Object[] { mongo, this, Context.toString(name),
-							Context.toString(this.shortName + "." + name) }));
+					new Object[] { mongo, this.db, shortName, fullName }));
 			this.put(name, this, property);
 		}
 		return property;

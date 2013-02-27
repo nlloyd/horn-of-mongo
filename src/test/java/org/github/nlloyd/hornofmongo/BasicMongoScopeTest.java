@@ -82,7 +82,7 @@ public class BasicMongoScopeTest {
 		MongoRuntime.call(new MongoScriptAction("connect", "var db = connect('test',null,null);"));
 		
 		for(File testScript : basics) {
-			System.out.println("--- executing test: " + testScript.getName());
+			System.out.println("\n--- executing test: " + testScript.getName());
 			MongoRuntime.call(new MongoScriptAction(testScript));
 		}
 	}
