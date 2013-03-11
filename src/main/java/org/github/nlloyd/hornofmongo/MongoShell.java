@@ -24,7 +24,10 @@ package org.github.nlloyd.hornofmongo;
 import java.net.UnknownHostException;
 
 import org.github.nlloyd.hornofmongo.action.MongoAction;
+import org.github.nlloyd.hornofmongo.action.MongoScriptAction;
+import org.github.nlloyd.hornofmongo.util.BSONizer;
 import org.mozilla.javascript.Context;
+import org.mozilla.javascript.ScriptableObject;
 
 import com.mongodb.BasicDBObject;
 import com.mongodb.DB;
@@ -44,33 +47,27 @@ public class MongoShell {
 	 * @throws UnknownHostException 
 	 */
 	public static void main(String[] args) throws UnknownHostException {
-		Mongo mongo = new Mongo();
-		DB db = mongo.getDB("test");
-		DBCollection c = db.getCollection("test");
-		DBObject one = c.findOne();
+//		Mongo mongo = new Mongo();
+//		DB db = mongo.getDB("test");
+//		DBCollection c = db.getCollection("test");
+//		DBObject one = c.findOne();
 		
 //		System.err.println("------------------");
 		
-		MongoRuntime.call(new MongoAction() {
+		Object result = MongoRuntime.call(new MongoScriptAction("var junk = {0:'val', '123': 123, '456':'7'};"));
 
-			public Object run(Context cx) {
-				return cx.evaluateString(
-						mongoScope,
-						"var db = connect('shell_test',null,null); print('connected to: ' + db._name); " +
-						"db.test.findOne({" +
-						"'a': /abc.*def/im" +
-//						"db.test.insert({" +
-//						"'a': 1, " +
-//						"'today': new Date(), " +
-//						"'isotoday': new ISODate(), " +
-//						"'array': [1,2,'3']" +
-						"});",
-						"shell", 
-						0, 
-						null);
-			}
-			
-		});
+//						"var db = connect('shell_test',null,null); print('connected to: ' + db._name); " +
+//						"db.test.findOne({" +
+//						"'a': /abc.*def/im" +
+////						"db.test.insert({" +
+////						"'a': 1, " +
+////						"'today': new Date(), " +
+////						"'isotoday': new ISODate(), " +
+////						"'array': [1,2,'3']" +
+//						"});",
+		result = ScriptableObject.getProperty(MongoRuntime.getMongoScope(), "junk");
+		
+		System.out.println(BSONizer.convertJStoBSON(result));
 	}
 
 }

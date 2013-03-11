@@ -38,7 +38,9 @@ import org.github.nlloyd.hornofmongo.adaptor.NumberInt;
 import org.github.nlloyd.hornofmongo.adaptor.NumberLong;
 import org.github.nlloyd.hornofmongo.adaptor.ObjectId;
 import org.mozilla.javascript.Context;
+import org.mozilla.javascript.Function;
 import org.mozilla.javascript.JavaScriptException;
+import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
 import org.mozilla.javascript.ast.Scope;
 import org.mozilla.javascript.tools.shell.Global;
@@ -60,33 +62,33 @@ public class MongoScope extends Global {
 	 * 
 	 */
 	private static final long serialVersionUID = 4650743395507077775L;
-	
+
 	private static final Logger logger = Logger.getLogger(MongoScope.class);
-	
-	private static String[] mongoApiFiles = {
-		"mongodb/utils.js",
-		"mongodb/utils_sh.js",
-		"mongodb/db.js",
-		"mongodb/mongo.js",
-		"mongodb/mr.js",
-		"mongodb/query.js",
-		"mongodb/collection.js"
-	};
+
+	private static String[] mongoApiFiles = { "mongodb/utils.js",
+			"mongodb/utils_sh.js", "mongodb/db.js", "mongodb/mongo.js",
+			"mongodb/mr.js", "mongodb/query.js", "mongodb/collection.js" };
 
 	public MongoScope() {
 		super();
 	}
 
-	public MongoScope(Context context) throws IllegalAccessException, InstantiationException, InvocationTargetException {
+	public MongoScope(Context context) throws IllegalAccessException,
+			InstantiationException, InvocationTargetException {
 		super(context);
 		initMongoJS(context);
 		execCoreFiles(context);
 	}
-	
-	protected void initMongoJS(Context context) throws IllegalAccessException, InstantiationException, InvocationTargetException {
-		if(!isInitialized()) {
+
+	protected void initMongoJS(Context context) throws IllegalAccessException,
+			InstantiationException, InvocationTargetException {
+		if (!isInitialized()) {
 			super.init(context);
 		}
+//		context.setOptimizationLevel(-1);
+		
+		defineFunctionProperties(new String[]{"sleep"}, this.getClass(), ScriptableObject.DONTENUM);
+		
 		ScriptableObject.defineClass(this, Mongo.class, false, false);
 		ScriptableObject.defineClass(this, ObjectId.class, false, false);
 		ScriptableObject.defineClass(this, DB.class, false, false);
@@ -94,46 +96,69 @@ public class MongoScope extends Global {
 		ScriptableObject.defineClass(this, InternalCursor.class, false, false);
 		ScriptableObject.defineClass(this, DBQuery.class, false, false);
 		ScriptableObject.defineClass(this, BinData.class, false, false);
-		
+
 		ScriptableObject.defineClass(this, NumberLong.class, false, false);
 		ScriptableObject.defineClass(this, NumberInt.class, false, false);
-		
-//        assert( JS_InitClass( cx , global , 0 , &mongo_class , local ? mongo_local_constructor : mongo_external_constructor , 0 , 0 , mongo_functions , 0 , 0 ) );
-//
-//        assert( JS_InitClass( cx , global , 0 , &object_id_class , object_id_constructor , 0 , 0 , object_id_functions , 0 , 0 ) );
-//        assert( JS_InitClass( cx , global , 0 , &db_class , db_constructor , 2 , 0 , 0 , 0 , 0 ) );
-//        XXXXXXassert( JS_InitClass( cx , global , 0 , &db_collection_class , db_collection_constructor , 4 , 0 , 0 , 0 , 0 ) );
-//        XXXXXXassert( JS_InitClass( cx , global , 0 , &internal_cursor_class , internal_cursor_constructor , 0 , 0 , internal_cursor_functions , 0 , 0 ) );
-//        ???assert( JS_InitClass( cx , global , 0 , &dbquery_class , dbquery_constructor , 0 , 0 , 0 , 0 , 0 ) );
-//        assert( JS_InitClass( cx , global , 0 , &dbpointer_class , dbpointer_constructor , 0 , 0 , dbpointer_functions , 0 , 0 ) );
-//        assert( JS_InitClass( cx , global , 0 , &bindata_class , bindata_constructor , 0 , 0 , bindata_functions , 0 , 0 ) );
-//
-//        ???assert( JS_InitClass( cx , global , 0 , &timestamp_class , timestamp_constructor , 0 , 0 , 0 , 0 , 0 ) );
-//        assert( JS_InitClass( cx , global , 0 , &numberlong_class , numberlong_constructor , 0 , 0 , numberlong_functions , 0 , 0 ) );
-//        assert( JS_InitClass( cx , global , 0 , &numberint_class , numberint_constructor , 0 , 0 , numberint_functions , 0 , 0 ) );
-//        assert( JS_InitClass( cx , global , 0 , &minkey_class , 0 , 0 , 0 , 0 , 0 , 0 ) );
-//        assert( JS_InitClass( cx , global , 0 , &maxkey_class , 0 , 0 , 0 , 0 , 0 , 0 ) );
-//
-//        ???assert( JS_InitClass( cx , global , 0 , &map_class , map_constructor , 0 , 0 , map_functions , 0 , 0 ) );
-//
-//        XXXXXXassert( JS_InitClass( cx , global , 0 , &bson_ro_class , bson_cons , 0 , 0 , bson_functions , 0 , 0 ) );
-//        XXXXXXassert( JS_InitClass( cx , global , 0 , &bson_class , bson_cons , 0 , 0 , bson_functions , 0 , 0 ) );
-//
-//        static const char *dbrefName = "DBRef";
-//        dbref_class.name = dbrefName;
-//        assert( JS_InitClass( cx , global , 0 , &dbref_class , dbref_constructor , 2 , 0 , bson_functions , 0 , 0 ) );
+
+		// assert( JS_InitClass( cx , global , 0 , &mongo_class , local ?
+		// mongo_local_constructor : mongo_external_constructor , 0 , 0 ,
+		// mongo_functions , 0 , 0 ) );
+		//
+		// assert( JS_InitClass( cx , global , 0 , &object_id_class ,
+		// object_id_constructor , 0 , 0 , object_id_functions , 0 , 0 ) );
+		// assert( JS_InitClass( cx , global , 0 , &db_class , db_constructor ,
+		// 2 , 0 , 0 , 0 , 0 ) );
+		// XXXXXXassert( JS_InitClass( cx , global , 0 , &db_collection_class ,
+		// db_collection_constructor , 4 , 0 , 0 , 0 , 0 ) );
+		// XXXXXXassert( JS_InitClass( cx , global , 0 , &internal_cursor_class
+		// , internal_cursor_constructor , 0 , 0 , internal_cursor_functions , 0
+		// , 0 ) );
+		// ???assert( JS_InitClass( cx , global , 0 , &dbquery_class ,
+		// dbquery_constructor , 0 , 0 , 0 , 0 , 0 ) );
+		// assert( JS_InitClass( cx , global , 0 , &dbpointer_class ,
+		// dbpointer_constructor , 0 , 0 , dbpointer_functions , 0 , 0 ) );
+		// assert( JS_InitClass( cx , global , 0 , &bindata_class ,
+		// bindata_constructor , 0 , 0 , bindata_functions , 0 , 0 ) );
+		//
+		// ???assert( JS_InitClass( cx , global , 0 , &timestamp_class ,
+		// timestamp_constructor , 0 , 0 , 0 , 0 , 0 ) );
+		// assert( JS_InitClass( cx , global , 0 , &numberlong_class ,
+		// numberlong_constructor , 0 , 0 , numberlong_functions , 0 , 0 ) );
+		// assert( JS_InitClass( cx , global , 0 , &numberint_class ,
+		// numberint_constructor , 0 , 0 , numberint_functions , 0 , 0 ) );
+		// assert( JS_InitClass( cx , global , 0 , &minkey_class , 0 , 0 , 0 , 0
+		// , 0 , 0 ) );
+		// assert( JS_InitClass( cx , global , 0 , &maxkey_class , 0 , 0 , 0 , 0
+		// , 0 , 0 ) );
+		//
+		// ???assert( JS_InitClass( cx , global , 0 , &map_class ,
+		// map_constructor , 0 , 0 , map_functions , 0 , 0 ) );
+		//
+		// XXXXXXassert( JS_InitClass( cx , global , 0 , &bson_ro_class ,
+		// bson_cons , 0 , 0 , bson_functions , 0 , 0 ) );
+		// XXXXXXassert( JS_InitClass( cx , global , 0 , &bson_class , bson_cons
+		// , 0 , 0 , bson_functions , 0 , 0 ) );
+		//
+		// static const char *dbrefName = "DBRef";
+		// dbref_class.name = dbrefName;
+		// assert( JS_InitClass( cx , global , 0 , &dbref_class ,
+		// dbref_constructor , 2 , 0 , bson_functions , 0 , 0 ) );
 
 	}
-	
+
 	protected void execCoreFiles(Context context) {
-		for(String jsSetupFile : mongoApiFiles) {
+		for (String jsSetupFile : mongoApiFiles) {
 			try {
-				context.evaluateReader(this, loadFromClasspath(jsSetupFile), 
+				context.evaluateReader(this, loadFromClasspath(jsSetupFile),
 						jsSetupFile, 0, null);
 			} catch (IOException e) {
-				logger.error("Caught IOException attempting to load from classpath: " + jsSetupFile, e);
+				logger.error(
+						"Caught IOException attempting to load from classpath: "
+								+ jsSetupFile, e);
 			} catch (JavaScriptException e) {
-				logger.error("Caught JavaScriptException attempting to load from classpath: " + jsSetupFile, e);
+				logger.error(
+						"Caught JavaScriptException attempting to load from classpath: "
+								+ jsSetupFile, e);
 			}
 		}
 	}
@@ -143,5 +168,20 @@ public class MongoScope extends Global {
 		reader = new BufferedReader(new InputStreamReader(
 				ClassLoader.getSystemResourceAsStream(filePath)));
 		return reader;
+	}
+
+	/* --- global utility functions --- */
+//	scope.injectNative( "hex_md5" , native_hex_md5 );
+//    scope.injectNative( "version" , native_version );
+//    scope.injectNative( "sleep" , native_sleep );
+	
+//	public static Object version(Context cx, Scriptable thisObj, Object[] args,
+//			Function funObj) {
+//		return MongoScope.print(cx, thisObj, new Object[]{}, funObj);
+//	}
+	
+	public static void sleep(Context cx, Scriptable thisObj, Object[] args,
+			Function funObj) throws NumberFormatException, InterruptedException {
+		Thread.sleep(Long.valueOf(args[0].toString()));
 	}
 }

@@ -1,6 +1,9 @@
 package org.github.nlloyd.hornofmongo.adaptor;
 
+import org.github.nlloyd.hornofmongo.MongoRuntime;
+import org.github.nlloyd.hornofmongo.action.CallMethodAction;
 import org.mozilla.javascript.NativeObject;
+import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
 import org.mozilla.javascript.annotations.JSConstructor;
 
@@ -34,9 +37,24 @@ public class DBQuery extends ScriptableObject {
 		put("_prettyShell", this, false);
 	}
 
+	/**
+	 * @see org.mozilla.javascript.ScriptableObject#getClassName()
+	 */
 	@Override
 	public String getClassName() {
 		return this.getClass().getSimpleName();
+	}
+
+	/**
+	 * @see org.mozilla.javascript.ScriptableObject#get(int, org.mozilla.javascript.Scriptable)
+	 */
+	@Override
+	public Object get(int index, Scriptable start) {
+		Object got = null;
+		if(this.equals(start)) {
+			got = MongoRuntime.call(new CallMethodAction(this, "arrayAccess", new Object[]{index}));
+		}
+		return got;
 	}
 
 }

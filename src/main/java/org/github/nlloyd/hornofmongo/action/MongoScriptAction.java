@@ -137,6 +137,7 @@ public class MongoScriptAction extends MongoAction {
 	 */
 	@Override
 	public Object run(Context cx) {
+//		cx.setOptimizationLevel(-1);
 		Object result = null;
 		if(StringUtils.isNotBlank(scriptString)) {
 			result =  cx.evaluateString(

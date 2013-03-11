@@ -23,19 +23,22 @@ package org.github.nlloyd.hornofmongo;
 
 import java.io.File;
 import java.io.FilenameFilter;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.github.nlloyd.hornofmongo.action.MongoScriptAction;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
 /**
  * @author nlloyd
  *
  */
-public class BasicMongoScopeTest {
+@RunWith(Parameterized.class)
+public class JSTest {
 	
 	private static File cwd = null;
 
@@ -44,47 +47,40 @@ public class BasicMongoScopeTest {
 	 */
 	@BeforeClass
 	public static void setUpBeforeClass() throws Exception {
-		cwd = new File(System.getProperty("user.dir"), "target/test-classes");
+		MongoRuntime.call(new MongoScriptAction("connect", "var db = connect('test',null,null);"));
 	}
 
-	/**
-	 * @throws java.lang.Exception
-	 */
-	@AfterClass
-	public static void tearDownAfterClass() throws Exception {
-	}
-
-	/**
-	 * @throws java.lang.Exception
-	 */
-	@Before
-	public void setUp() throws Exception {
-	}
-
-	/**
-	 * @throws java.lang.Exception
-	 */
-	@After
-	public void tearDown() throws Exception {
-	}
-
-	@Test
-	public void test() {
-		File[] basics = cwd.listFiles(new FilenameFilter() {
+	@Parameters(name = "{0}")
+	public static Iterable<Object[]> getJsTestScripts() {
+		if(cwd == null)
+			cwd = new File(System.getProperty("user.dir"), "target/test-classes");
+		
+		File[] jsFiles = cwd.listFiles(new FilenameFilter() {
 	
 			@Override
 			public boolean accept(File dir, String name) {
-				return name.startsWith("basic") && name.endsWith(".js");
+				return !name.startsWith("_") && name.endsWith(".js");
 			}
 			
 		});
 		
-		MongoRuntime.call(new MongoScriptAction("connect", "var db = connect('test',null,null);"));
+		List<Object[]> testScripts  = new ArrayList<Object[]>(jsFiles.length);
+		// fileName is the first argument for naming the tests, otherwise it is ignored
+		for(File jsFile : jsFiles)
+			testScripts.add(new Object[]{jsFile.getName(), jsFile});
 		
-		for(File testScript : basics) {
-			System.out.println("\n--- executing test: " + testScript.getName());
-			MongoRuntime.call(new MongoScriptAction(testScript));
-		}
+		return testScripts;
+	}
+	
+	private File jsTestFile = null;
+	
+	public JSTest(String jsTestFileName, File jsTestFile) {
+		this.jsTestFile = jsTestFile;
+	}
+	
+	@Test
+	public void test() {
+		MongoRuntime.call(new MongoScriptAction(jsTestFile));
 	}
 
 }

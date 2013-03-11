@@ -71,7 +71,7 @@ public class DBCollection extends ScriptableObject {
 
 	/**
 	 * Returns either the JavaScript property if it exists or a new
-	 * {@link DBCollection} instance with the provided name.
+	 * {@link DBCollection} instance with the provided db.name + "." + name.
 	 * 
 	 * @see org.mozilla.javascript.ScriptableObject#get(java.lang.String,
 	 *      org.mozilla.javascript.Scriptable)
@@ -90,7 +90,20 @@ public class DBCollection extends ScriptableObject {
 		}
 		return property;
 	}
-
+	
+	protected void verify() {
+		if(StringUtils.isBlank(this.fullName))
+			throw new IllegalArgumentException("no fullName");
+		if(StringUtils.isBlank(this.shortName))
+			throw new IllegalArgumentException("no shortName");
+		if(this.db == null)
+			throw new IllegalArgumentException("no db");
+		if(!this.fullName.equals(this.db.name + "." + this.shortName))
+			throw new IllegalArgumentException("name mismatch");
+		if(this.mongo == null)
+			throw new IllegalArgumentException("no mongo in DBCollection");
+	}
+	
 	public static boolean isSpecialName(final String name) {
 		boolean isSpecial = false;
 		if (StringUtils.isNotEmpty(name)

@@ -24,6 +24,7 @@ package org.github.nlloyd.hornofmongo.util;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.regex.Pattern;
 
 import org.bson.BSONObject;
@@ -31,8 +32,10 @@ import org.bson.types.Symbol;
 import org.github.nlloyd.hornofmongo.MongoRuntime;
 import org.github.nlloyd.hornofmongo.action.NewInstanceAction;
 import org.github.nlloyd.hornofmongo.adaptor.ObjectId;
+import org.mozilla.javascript.ConsString;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.NativeArray;
+import org.mozilla.javascript.NativeObject;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
 import org.mozilla.javascript.Undefined;
@@ -40,7 +43,6 @@ import org.mozilla.javascript.regexp.NativeRegExp;
 
 import com.mongodb.BasicDBObject;
 import com.mongodb.Bytes;
-import com.mongodb.DBObject;
 
 /**
  * @author nlloyd
@@ -58,34 +60,35 @@ public class BSONizer {
 		    }
 		    bsonObject = bsonArray;
         } else if(jsObject instanceof NativeRegExp) {
-        	DBObject bsonRegex = new BasicDBObject();
             Object source = ScriptableObject.getProperty((Scriptable)jsObject, "source");
             String fullRegex = (String)Context.jsToJava(jsObject, String.class);
             String options = fullRegex.substring(fullRegex.lastIndexOf("/") + 1);
             
-            bsonRegex.put("$regex", source);
-            bsonRegex.put("$options", options);
-            
-            bsonObject = bsonRegex;
+            bsonObject = Pattern.compile(source.toString(), Bytes.regexFlags(options));;
         } else if(jsObject instanceof ObjectId) {
         	bsonObject = ((ObjectId)jsObject).getWrappedObjectId();
-		} else if(jsObject instanceof ScriptableObject) {
+		} else if(jsObject instanceof NativeObject) {
 			BasicDBObject bson = new BasicDBObject();
 			bsonObject = bson;
 
+			NativeObject rawJsObject = (NativeObject)jsObject;
+			for(Entry<Object, Object> jsEntry : rawJsObject.entrySet()) {
+				System.out.printf("obj has: %s -> %s\n", jsEntry.getKey(), jsEntry.getValue());
+			}
 			Object[] ids = ((ScriptableObject)jsObject).getAllIds();
 			for( Object id : ids )
 			{
 				String key = id.toString();
 				Object value = ScriptableObject.getProperty((Scriptable)jsObject,key);
-				System.out.printf("obj has: %s -> %s of type %s\n", key, value.toString(), value.getClass().getSimpleName());
+				System.out.printf("obj has: %s -> %s\n", key, value);
 			    value = convertJStoBSON(value);
 				bson.put( key, value );
 			}
+		} else if(jsObject instanceof ConsString) {
+			bsonObject = jsObject.toString();
 		} else if(jsObject instanceof Undefined) {
 			bsonObject = null;
 		} else {
-			// TODO throw an exception?
 			bsonObject = jsObject;
 		}
 		
@@ -99,8 +102,10 @@ public class BSONizer {
 			Scriptable jsArray = (Scriptable)MongoRuntime.call(new NewInstanceAction(bsonList.size()));
 
 			int index = 0;
-			for(Object bsonEntry : bsonList)
+			for(Object bsonEntry : bsonList) {
 				ScriptableObject.putProperty(jsArray, index, convertBSONtoJS(bsonEntry));
+				index++;
+			}
 			
 			jsObject = jsArray;
 		} else if(bsonObject instanceof BSONObject) {
@@ -122,7 +127,7 @@ public class BSONizer {
 			String options = Bytes.regexFlags(regex.flags());
 			jsObject = MongoRuntime.call(new NewInstanceAction("RegExp", new Object[]{source, options}));
 		} else if(bsonObject instanceof org.bson.types.ObjectId) {
-			jsObject = new ObjectId((org.bson.types.ObjectId)bsonObject);
+			jsObject = MongoRuntime.call(new NewInstanceAction("ObjectId", new Object[]{bsonObject}));
 		} else {
 			jsObject = bsonObject;
 		}
