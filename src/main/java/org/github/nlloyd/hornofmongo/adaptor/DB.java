@@ -54,21 +54,12 @@ public class DB extends ScriptableObject {
 	public DB() {}
 	
 	@JSConstructor
-	public DB(Mongo mongo) {
-		super();
-		this.mongo = mongo;
-		this.name = "test";
-		put("_mongo", this, this.mongo);
-		put("_name", this, this.name);
-	}
-	
-	@JSConstructor
 	public DB(Mongo mongo, String name) {
 		super();
 		this.mongo = mongo;
 		this.name = name;
 		if(StringUtils.isBlank(name))
-			this.name = "test";
+			throw new IllegalArgumentException("DB name must be provided");
 		put("_mongo", this, this.mongo);
 		put("_name", this, this.name);
 	}
