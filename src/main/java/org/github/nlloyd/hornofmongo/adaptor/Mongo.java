@@ -93,10 +93,19 @@ public class Mongo extends ScriptableObject {
 			DBCollection collection = db.getCollection(collectionName);
 			DBCursor cursor = collection.find(bsonQuery, bsonFields).skip(skip)
 					.limit(limit).batchSize(batchSize).addOption(options);
-			InternalCursor jsCursor = (InternalCursor) MongoRuntime
-					.call(new NewInstanceAction("InternalCursor",
-							new Object[] { cursor }));
-			result = jsCursor;
+			if (bsonQuery.containsField("$explain")
+					&& (Boolean) bsonQuery.get("$explain")) {
+				DBObject explainResult = cursor.explain();
+				Object jsExplainResult = BSONizer
+						.convertBSONtoJS(explainResult);
+				result = MongoRuntime.call(new NewInstanceAction(
+						"InternalCursor", new Object[] { jsExplainResult }));
+			} else {
+				InternalCursor jsCursor = (InternalCursor) MongoRuntime
+						.call(new NewInstanceAction("InternalCursor",
+								new Object[] { cursor }));
+				result = jsCursor;
+			}
 		}
 
 		return result;
