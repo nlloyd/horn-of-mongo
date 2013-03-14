@@ -30,12 +30,14 @@ import java.util.regex.Pattern;
 import org.bson.BSONObject;
 import org.bson.types.Symbol;
 import org.github.nlloyd.hornofmongo.MongoRuntime;
+import org.github.nlloyd.hornofmongo.action.MongoAction;
 import org.github.nlloyd.hornofmongo.action.NewInstanceAction;
 import org.github.nlloyd.hornofmongo.adaptor.ObjectId;
 import org.mozilla.javascript.ConsString;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.NativeArray;
 import org.mozilla.javascript.NativeObject;
+import org.mozilla.javascript.ScriptRuntime;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
 import org.mozilla.javascript.Undefined;
@@ -74,16 +76,17 @@ public class BSONizer {
 			NativeObject rawJsObject = (NativeObject)jsObject;
 			for(Entry<Object, Object> jsEntry : rawJsObject.entrySet()) {
 				System.out.printf("obj has: %s -> %s\n", jsEntry.getKey(), jsEntry.getValue());
+				bson.put(jsEntry.getKey().toString(), convertJStoBSON(jsEntry.getValue()));
 			}
-			Object[] ids = ((ScriptableObject)jsObject).getAllIds();
-			for( Object id : ids )
-			{
-				String key = id.toString();
-				Object value = ScriptableObject.getProperty((Scriptable)jsObject,key);
-				System.out.printf("obj has: %s -> %s\n", key, value);
-			    value = convertJStoBSON(value);
-				bson.put( key, value );
-			}
+//			Object[] ids = ((ScriptableObject)jsObject).getAllIds();
+//			for( Object id : ids )
+//			{
+//				String key = id.toString();
+//				Object value = ScriptableObject.getProperty((Scriptable)jsObject,key);
+//				System.out.printf("obj has: %s -> %s\n", key, value);
+//			    value = convertJStoBSON(value);
+//				bson.put( key, value );
+//			}
 		} else if(jsObject instanceof ConsString) {
 			bsonObject = jsObject.toString();
 		} else if(jsObject instanceof Undefined) {
@@ -114,7 +117,7 @@ public class BSONizer {
 			
 			for(String key : bsonObj.keySet()) {
 				Object value = convertBSONtoJS(bsonObj.get(key));
-				ScriptableObject.putProperty(jsObj, key, value);
+				MongoRuntime.call(new JSPopulatePropertyAction(jsObj, key, value));
 			}
 			jsObject = jsObj;
 		} else if(bsonObject instanceof Symbol) {
@@ -133,5 +136,24 @@ public class BSONizer {
 		}
 		
 		return jsObject;
+	}
+	
+	private static class JSPopulatePropertyAction extends MongoAction {
+
+	    private Scriptable obj;
+	    private Object key;
+	    private Object value;
+	    
+	    public JSPopulatePropertyAction(Scriptable obj, Object key, Object value) {
+	        this.obj = obj;
+	        this.key = key;
+	        this.value = value;
+	    }
+	    
+        @Override
+        public Object run(Context cx) {
+            return ScriptRuntime.setObjectElem(obj, key, value, cx);
+        }
+	    
 	}
 }
