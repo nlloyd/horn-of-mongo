@@ -37,12 +37,12 @@ import org.mozilla.javascript.ContextFactory;
  */
 public class MongoRuntime {
 
-    private static MongoRuntime globalRuntime = new MongoRuntime();
+    protected static MongoRuntime globalRuntime = new MongoRuntime();
 
     private MongoScope scope;
     private ContextFactory contextFactory = new ContextFactory();
 
-    private MongoRuntime() {
+    protected MongoRuntime() {
         scope = (MongoScope) contextFactory.call(new ContextAction() {
 
             public Object run(Context cx) {

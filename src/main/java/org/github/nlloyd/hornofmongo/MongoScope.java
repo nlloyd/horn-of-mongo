@@ -46,6 +46,7 @@ import org.mozilla.javascript.ast.Scope;
 import org.mozilla.javascript.tools.shell.Global;
 
 import com.mongodb.MongoException;
+import com.mongodb.util.Util;
 
 /**
  * The MongoDB-specific {@link Scope} implementation. This extends
@@ -67,9 +68,10 @@ public class MongoScope extends Global {
 
     private static final Logger logger = Logger.getLogger(MongoScope.class);
 
-    private static String[] mongoApiFiles = { "mongodb/utils.js",
-            "mongodb/utils_sh.js", "mongodb/db.js", "mongodb/mongo.js",
-            "mongodb/mr.js", "mongodb/query.js", "mongodb/collection.js" };
+    private static String[] mongoApiFiles = { "mongodb/assert.js",
+            "mongodb/types.js", "mongodb/utils.js", "mongodb/utils_sh.js",
+            "mongodb/db.js", "mongodb/mongo.js", "mongodb/mr.js",
+            "mongodb/query.js", "mongodb/collection.js" };
 
     /**
      * If true then some {@link MongoException} will be caught and the messages
@@ -116,8 +118,13 @@ public class MongoScope extends Global {
         }
         // context.setOptimizationLevel(-1);
 
-        defineFunctionProperties(new String[] { "sleep" }, this.getClass(),
+        String[] names = {
+                "sleep",
+                "hex_md5"
+        };
+        defineFunctionProperties(names, this.getClass(),
                 ScriptableObject.DONTENUM);
+        
 
         ScriptableObject.defineClass(this, Mongo.class, false, false);
         ScriptableObject.defineClass(this, ObjectId.class, false, false);
@@ -204,7 +211,7 @@ public class MongoScope extends Global {
         if (this.isMimicShellExceptionBehavior()) {
             System.out.println(me.getCode() + " -> " + me.getMessage());
             // check error codes that do NOT result in an exception
-            switch(me.getCode()) {
+            switch (me.getCode()) {
             case 10088:
                 System.out.println(me.getMessage());
                 return;
@@ -229,5 +236,12 @@ public class MongoScope extends Global {
     public static void sleep(Context cx, Scriptable thisObj, Object[] args,
             Function funObj) throws NumberFormatException, InterruptedException {
         Thread.sleep(Long.valueOf(args[0].toString()));
+    }
+
+    public static byte[] hex_md5(Context cx, Scriptable thisObj, Object[] args,
+            Function funObj) {
+        // just like mongo native_hex_md5 call, only expects a single string
+        final String str = Context.toString(args[0]);
+        return Util.hexMD5(str.getBytes()).getBytes();
     }
 }
