@@ -27,49 +27,48 @@ import org.github.nlloyd.hornofmongo.action.MongoAction;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ContextAction;
 import org.mozilla.javascript.ContextFactory;
-import org.mozilla.javascript.Scriptable;
 
 /**
- * Runtime class for MongoDB that initializes and grants access to
- * the global MongoDB JavaScript scope.
+ * Runtime class for MongoDB that initializes and grants access to the global
+ * MongoDB JavaScript scope.
  * 
  * @author nlloyd
- *
+ * 
  */
 public class MongoRuntime {
 
-	private static MongoRuntime globalRuntime = new MongoRuntime();
-	
-	private Scriptable scope;
-	private ContextFactory contextFactory = new ContextFactory();
-	
-	private MongoRuntime() {
-		scope = (Scriptable)contextFactory.call(new ContextAction() {
+    private static MongoRuntime globalRuntime = new MongoRuntime();
 
-			public Object run(Context cx) {
-				Object scope = null;
-				try {
-					scope = new MongoScope(cx);
-				} catch (IllegalAccessException e) {
-					e.printStackTrace();
-				} catch (InstantiationException e) {
-					e.printStackTrace();
-				} catch (InvocationTargetException e) {
-					e.printStackTrace();
-				}
-				
-				return scope;
-			}
-			
-		});
-	}
-	
-	public static Scriptable getMongoScope() {
-		return globalRuntime.scope;
-	}
-	
-	public static Object call(MongoAction action) {
-		return globalRuntime.contextFactory.call(action);
-	}
-	
+    private MongoScope scope;
+    private ContextFactory contextFactory = new ContextFactory();
+
+    private MongoRuntime() {
+        scope = (MongoScope) contextFactory.call(new ContextAction() {
+
+            public Object run(Context cx) {
+                Object scope = null;
+                try {
+                    scope = new MongoScope(cx);
+                } catch (IllegalAccessException e) {
+                    e.printStackTrace();
+                } catch (InstantiationException e) {
+                    e.printStackTrace();
+                } catch (InvocationTargetException e) {
+                    e.printStackTrace();
+                }
+
+                return scope;
+            }
+
+        });
+    }
+
+    public static MongoScope getMongoScope() {
+        return globalRuntime.scope;
+    }
+
+    public static Object call(MongoAction action) {
+        return globalRuntime.contextFactory.call(action);
+    }
+
 }

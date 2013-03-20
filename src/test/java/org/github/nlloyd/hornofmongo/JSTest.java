@@ -35,52 +35,58 @@ import org.junit.runners.Parameterized.Parameters;
 
 /**
  * @author nlloyd
- *
+ * 
  */
 @RunWith(Parameterized.class)
 public class JSTest {
-	
-	private static File cwd = null;
 
-	/**
-	 * @throws java.lang.Exception
-	 */
-	@BeforeClass
-	public static void setUpBeforeClass() throws Exception {
-		MongoRuntime.call(new MongoScriptAction("connect", "var db = connect('test',null,null);"));
-	}
+    private static File cwd = null;
 
-	@Parameters(name = "{0}")
-	public static Iterable<Object[]> getJsTestScripts() {
-		if(cwd == null)
-			cwd = new File(System.getProperty("user.dir"), "target/test-classes");
-		
-		File[] jsFiles = cwd.listFiles(new FilenameFilter() {
-	
-			@Override
-			public boolean accept(File dir, String name) {
-				return !name.startsWith("_") && name.endsWith(".js");
-			}
-			
-		});
-		
-		List<Object[]> testScripts  = new ArrayList<Object[]>(jsFiles.length);
-		// fileName is the first argument for naming the tests, otherwise it is ignored
-		for(File jsFile : jsFiles)
-			testScripts.add(new Object[]{jsFile.getName(), jsFile});
-		
-		return testScripts;
-	}
-	
-	private File jsTestFile = null;
-	
-	public JSTest(String jsTestFileName, File jsTestFile) {
-		this.jsTestFile = jsTestFile;
-	}
-	
-	@Test
-	public void test() {
-		MongoRuntime.call(new MongoScriptAction(jsTestFile));
-	}
+    /**
+     * @throws java.lang.Exception
+     */
+    @BeforeClass
+    public static void setUpBeforeClass() throws Exception {
+        // set the exception handling behavior of the test runtime to mimic the
+        // official mongo shell client
+        MongoRuntime.getMongoScope().setMimicShellExceptionBehavior(true);
+        MongoRuntime.call(new MongoScriptAction("connect",
+                "var db = connect('test',null,null);"));
+    }
+
+    @Parameters(name = "{0}")
+    public static Iterable<Object[]> getJsTestScripts() {
+        if (cwd == null)
+            cwd = new File(System.getProperty("user.dir"),
+                    "target/test-classes");
+
+        File[] jsFiles = cwd.listFiles(new FilenameFilter() {
+
+            @Override
+            public boolean accept(File dir, String name) {
+                return !name.startsWith("_") && name.endsWith(".js");
+            }
+
+        });
+
+        List<Object[]> testScripts = new ArrayList<Object[]>(jsFiles.length);
+        // fileName is the first argument for naming the tests, otherwise it is
+        // ignored
+        for (File jsFile : jsFiles)
+            testScripts.add(new Object[] { jsFile.getName(), jsFile });
+
+        return testScripts;
+    }
+
+    private File jsTestFile = null;
+
+    public JSTest(String jsTestFileName, File jsTestFile) {
+        this.jsTestFile = jsTestFile;
+    }
+
+    @Test
+    public void test() {
+        MongoRuntime.call(new MongoScriptAction(jsTestFile));
+    }
 
 }

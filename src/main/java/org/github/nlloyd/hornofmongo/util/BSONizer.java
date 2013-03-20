@@ -75,18 +75,9 @@ public class BSONizer {
 
 			NativeObject rawJsObject = (NativeObject)jsObject;
 			for(Entry<Object, Object> jsEntry : rawJsObject.entrySet()) {
-				System.out.printf("obj has: %s -> %s\n", jsEntry.getKey(), jsEntry.getValue());
+//				System.out.printf("obj has: %s -> %s\n", jsEntry.getKey(), jsEntry.getValue());
 				bson.put(jsEntry.getKey().toString(), convertJStoBSON(jsEntry.getValue()));
 			}
-//			Object[] ids = ((ScriptableObject)jsObject).getAllIds();
-//			for( Object id : ids )
-//			{
-//				String key = id.toString();
-//				Object value = ScriptableObject.getProperty((Scriptable)jsObject,key);
-//				System.out.printf("obj has: %s -> %s\n", key, value);
-//			    value = convertJStoBSON(value);
-//				bson.put( key, value );
-//			}
 		} else if(jsObject instanceof ConsString) {
 			bsonObject = jsObject.toString();
 		} else if(jsObject instanceof Undefined) {
