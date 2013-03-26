@@ -24,6 +24,7 @@ package org.github.nlloyd.hornofmongo;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.github.nlloyd.hornofmongo.action.MongoScriptAction;
@@ -41,6 +42,16 @@ import org.junit.runners.Parameterized.Parameters;
 public class JSTest {
 
     private static File cwd = null;
+
+    /**
+     * Tests containing not-supported official mongodb shell features
+     * <ul>
+     * <li>basicc.js : because function startMongoProgramNoConnect() is not
+     * supported</li>
+     * </ul>
+     */
+    public static final List<String> excludedTests = Arrays
+            .asList(new String[] { "basicc.js" });
 
     /**
      * @throws java.lang.Exception
@@ -64,7 +75,8 @@ public class JSTest {
 
             @Override
             public boolean accept(File dir, String name) {
-                return !name.startsWith("_") && name.endsWith(".js");
+                return !name.startsWith("_") && name.endsWith(".js")
+                        && !excludedTests.contains(name);
             }
 
         });
@@ -90,7 +102,7 @@ public class JSTest {
             MongoRuntime.call(new MongoScriptAction(jsTestFile));
         } catch (Exception e) {
             // a few tests throw expected exceptions
-            if(!"basicb.js".equals(jsTestFile.getName())) {
+            if (!"basicb.js".equals(jsTestFile.getName())) {
                 throw e;
             }
         }

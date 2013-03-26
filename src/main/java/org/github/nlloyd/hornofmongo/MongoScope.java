@@ -238,10 +238,10 @@ public class MongoScope extends Global {
         Thread.sleep(Long.valueOf(args[0].toString()));
     }
 
-    public static byte[] hex_md5(Context cx, Scriptable thisObj, Object[] args,
+    public static String hex_md5(Context cx, Scriptable thisObj, Object[] args,
             Function funObj) {
         // just like mongo native_hex_md5 call, only expects a single string
         final String str = Context.toString(args[0]);
-        return Util.hexMD5(str.getBytes()).getBytes();
+        return Util.hexMD5(str.getBytes());
     }
 }
