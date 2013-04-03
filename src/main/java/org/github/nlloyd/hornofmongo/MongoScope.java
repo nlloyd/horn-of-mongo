@@ -120,7 +120,8 @@ public class MongoScope extends Global {
 
         String[] names = {
                 "sleep",
-                "hex_md5"
+                "hex_md5",
+                "_isWindows"
         };
         defineFunctionProperties(names, this.getClass(),
                 ScriptableObject.DONTENUM);
@@ -243,5 +244,10 @@ public class MongoScope extends Global {
         // just like mongo native_hex_md5 call, only expects a single string
         final String str = Context.toString(args[0]);
         return Util.hexMD5(str.getBytes());
+    }
+    
+    public static Boolean _isWindows(Context cx, Scriptable thisObj, Object[] args,
+            Function funObj) {
+        return System.getProperty("os.name").startsWith("Windows");
     }
 }

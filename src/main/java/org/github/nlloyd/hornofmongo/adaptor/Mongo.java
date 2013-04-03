@@ -61,7 +61,7 @@ public class Mongo extends ScriptableObject {
 
     private void initMongo(String host) throws UnknownHostException {
         this.host = host;
-        this.innerMongo = new com.mongodb.Mongo(this.host);
+        this.innerMongo = new com.mongodb.MongoClient(this.host);
     }
 
     /**
@@ -76,7 +76,8 @@ public class Mongo extends ScriptableObject {
 
     @JSFunction
     public Object find(final String ns, final Object query,
-            final Object fields, int limit, int skip, int batchSize, int options) {
+            final Object fields, Integer limit, Integer skip,
+            Integer batchSize, Integer options) {
         Object result = null;
 
         Object rawQuery = BSONizer.convertJStoBSON(query);
@@ -106,7 +107,7 @@ public class Mongo extends ScriptableObject {
         } else {
             DBCollection collection = db.getCollection(collectionName);
             DBCursor cursor = collection.find(bsonQuery, bsonFields).skip(skip)
-                    .limit(limit).batchSize(batchSize).addOption(options);
+                    .batchSize(batchSize).limit(limit).addOption(options);
             InternalCursor jsCursor = (InternalCursor) MongoRuntime
                     .call(new NewInstanceAction("InternalCursor",
                             new Object[] { cursor }));
@@ -193,11 +194,12 @@ public class Mongo extends ScriptableObject {
                 upsert);
 
         com.mongodb.DB db = innerMongo.getDB(ns.substring(0, ns.indexOf('.')));
-        DBCollection collection = db.getCollection(ns.substring(ns
-                .lastIndexOf('.') + 1));
+        DBCollection collection = db
+                .getCollection(ns.substring(ns.indexOf('.') + 1));
 
         try {
-            WriteResult result = collection.update(bsonQuery, bsonObj, upsert, false);
+            WriteResult result = collection.update(bsonQuery, bsonObj, upsert,
+                    false);
             System.out.println(result);
         } catch (MongoException me) {
             handleMongoException(me);
