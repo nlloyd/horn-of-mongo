@@ -18,11 +18,12 @@ import com.mongodb.DBCollection;
 import com.mongodb.DBCursor;
 import com.mongodb.DBObject;
 import com.mongodb.MongoException;
+import com.mongodb.WriteConcern;
 import com.mongodb.WriteResult;
 
 /**
- * JavaScript host Mongo object that acts as an adaptor between the JavaScript
- * Mongo API and the {@link com.mongodb.Mongo} Java driver class.
+ * JavaScript host Mongo object that acts as an adaptor between the JavaScript Mongo API and the
+ * {@link com.mongodb.Mongo} Java driver class.
  * 
  * @author nlloyd
  * 
@@ -39,8 +40,7 @@ public class Mongo extends ScriptableObject {
     protected String host;
 
     /**
-     * Reference to the owning {@link MongoScope} to check for certain
-     * scope-level behavior flags.
+     * Reference to the owning {@link MongoScope} to check for certain scope-level behavior flags.
      */
     protected MongoScope mongoScope;
 
@@ -75,8 +75,7 @@ public class Mongo extends ScriptableObject {
     // --- Mongo JavaScript function implementation ---
 
     @JSFunction
-    public Object find(final String ns, final Object query,
-            final Object fields, Integer limit, Integer skip,
+    public Object find(final String ns, final Object query, final Object fields, Integer limit, Integer skip,
             Integer batchSize, Integer options) {
         Object result = null;
 
@@ -89,8 +88,8 @@ public class Mongo extends ScriptableObject {
         if (rawFields instanceof DBObject)
             bsonFields = (DBObject) rawFields;
 
-        System.out.printf("find(%s, %s, %s, %d, %d, %d, %d)\n", ns, bsonQuery,
-                bsonFields, limit, skip, batchSize, options);
+        System.out.printf("find(%s, %s, %s, %d, %d, %d, %d)\n", ns, bsonQuery, bsonFields, limit, skip, batchSize,
+                options);
 
         com.mongodb.DB db = innerMongo.getDB(ns.substring(0, ns.indexOf('.')));
         String collectionName = ns.substring(ns.indexOf('.') + 1);
@@ -99,18 +98,16 @@ public class Mongo extends ScriptableObject {
                 CommandResult cmdResult = db.command(bsonQuery, options);
                 handlePostCommandActions(db, bsonQuery);
                 Object jsCmdResult = BSONizer.convertBSONtoJS(cmdResult);
-                result = MongoRuntime.call(new NewInstanceAction(
-                        "InternalCursor", new Object[] { jsCmdResult }));
+                result = MongoRuntime.call(new NewInstanceAction("InternalCursor", new Object[] { jsCmdResult }));
             } catch (MongoException me) {
                 handleMongoException(me);
             }
         } else {
             DBCollection collection = db.getCollection(collectionName);
-            DBCursor cursor = collection.find(bsonQuery, bsonFields).skip(skip)
-                    .batchSize(batchSize).limit(limit).addOption(options);
-            InternalCursor jsCursor = (InternalCursor) MongoRuntime
-                    .call(new NewInstanceAction("InternalCursor",
-                            new Object[] { cursor }));
+            DBCursor cursor = collection.find(bsonQuery, bsonFields).skip(skip).batchSize(batchSize).limit(limit)
+                    .addOption(options);
+            InternalCursor jsCursor = (InternalCursor) MongoRuntime.call(new NewInstanceAction("InternalCursor",
+                    new Object[] { cursor }));
             result = jsCursor;
         }
 
@@ -133,11 +130,9 @@ public class Mongo extends ScriptableObject {
             // into
             // index creation calls through the java driver
             if (ns.endsWith("system.indexes")) {
-                com.mongodb.DB db = innerMongo.getDB(ns.substring(0,
-                        ns.indexOf('.')));
+                com.mongodb.DB db = innerMongo.getDB(ns.substring(0, ns.indexOf('.')));
                 String indexNS = bsonObj.get("ns").toString();
-                DBCollection collection = db.getCollection(indexNS.substring(ns
-                        .indexOf('.') + 1));
+                DBCollection collection = db.getCollection(indexNS.substring(ns.indexOf('.') + 1));
                 DBObject keys = (DBObject) bsonObj.get("key");
                 DBObject indexOpts = new BasicDBObject();
                 if (bsonObj.containsField("name"))
@@ -148,10 +143,8 @@ public class Mongo extends ScriptableObject {
                     indexOpts.put("dropDups", bsonObj.get("dropDups"));
                 collection.ensureIndex(keys, indexOpts);
             } else {
-                com.mongodb.DB db = innerMongo.getDB(ns.substring(0,
-                        ns.indexOf('.')));
-                DBCollection collection = db.getCollection(ns.substring(ns
-                        .indexOf('.') + 1));
+                com.mongodb.DB db = innerMongo.getDB(ns.substring(0, ns.indexOf('.')));
+                DBCollection collection = db.getCollection(ns.substring(ns.indexOf('.') + 1));
                 collection.insert(bsonObj);
             }
         } catch (MongoException me) {
@@ -169,8 +162,7 @@ public class Mongo extends ScriptableObject {
         System.out.printf("remove(%s, %s)\n", ns, bsonPattern);
 
         com.mongodb.DB db = innerMongo.getDB(ns.substring(0, ns.indexOf('.')));
-        DBCollection collection = db
-                .getCollection(ns.substring(ns.indexOf('.') + 1));
+        DBCollection collection = db.getCollection(ns.substring(ns.indexOf('.') + 1));
 
         try {
             collection.remove(bsonPattern);
@@ -180,7 +172,7 @@ public class Mongo extends ScriptableObject {
     }
 
     @JSFunction
-    public void update(final String ns, Object query, Object obj, boolean upsert) {
+    public void update(final String ns, Object query, Object obj, final Boolean upsert, final Boolean multi) {
         Object rawQuery = BSONizer.convertJStoBSON(query);
         Object rawObj = BSONizer.convertJStoBSON(obj);
         DBObject bsonQuery = null;
@@ -190,16 +182,16 @@ public class Mongo extends ScriptableObject {
         if (rawObj instanceof DBObject)
             bsonObj = (DBObject) rawObj;
 
-        System.out.printf("update(%s, %s, %s, %b)\n", ns, bsonQuery, bsonObj,
-                upsert);
+        boolean upsertOp = (upsert != null) ? upsert : false;
+        boolean multiOp = (multi != null) ? multi : false;
+        
+        System.out.printf("update(%s, %s, %s, %b)\n", ns, bsonQuery, bsonObj, upsert);
 
         com.mongodb.DB db = innerMongo.getDB(ns.substring(0, ns.indexOf('.')));
-        DBCollection collection = db
-                .getCollection(ns.substring(ns.indexOf('.') + 1));
+        DBCollection collection = db.getCollection(ns.substring(ns.indexOf('.') + 1));
 
         try {
-            WriteResult result = collection.update(bsonQuery, bsonObj, upsert,
-                    false);
+            WriteResult result = collection.update(bsonQuery, bsonObj, upsertOp, multiOp);
             System.out.println(result);
         } catch (MongoException me) {
             handleMongoException(me);
@@ -207,8 +199,7 @@ public class Mongo extends ScriptableObject {
     }
 
     /**
-     * Root js api authenticate function. Returns nothing, only throws an
-     * exception on authentication failure.
+     * Root js api authenticate function. Returns nothing, only throws an exception on authentication failure.
      * 
      * @param authObj
      */
@@ -232,8 +223,7 @@ public class Mongo extends ScriptableObject {
             db = innerMongo.getDB(bsonAuth.get("userSource").toString());
         }
 
-        db.authenticateCommand(bsonAuth.get("user").toString(),
-                bsonAuth.get("pwd").toString().toCharArray());
+        db.authenticateCommand(bsonAuth.get("user").toString(), bsonAuth.get("pwd").toString().toCharArray());
     }
 
     private static enum ResetIndexCacheCommand {
@@ -244,8 +234,7 @@ public class Mongo extends ScriptableObject {
         for (ResetIndexCacheCommand command : ResetIndexCacheCommand.values()) {
             String commandName = command.toString();
             if (bsonQuery.containsField(commandName))
-                db.getCollection(bsonQuery.get(commandName).toString())
-                        .resetIndexCache();
+                db.getCollection(bsonQuery.get(commandName).toString()).resetIndexCache();
         }
     }
 

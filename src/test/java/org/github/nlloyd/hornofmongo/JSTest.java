@@ -48,10 +48,12 @@ public class JSTest {
      * <ul>
      * <li>basicc.js : because function startMongoProgramNoConnect() is not
      * supported</li>
+     * <li>updatef.js : because function startParallelShell() is not
+     * supported</li>
      * </ul>
      */
     public static final List<String> excludedTests = Arrays
-            .asList(new String[] { "basicc.js" });
+            .asList(new String[] { "basicc.js", "updatef.js" });
 
     /**
      * @throws java.lang.Exception
@@ -75,7 +77,9 @@ public class JSTest {
 
             @Override
             public boolean accept(File dir, String name) {
-                return !name.startsWith("_") && name.endsWith(".js")
+//                return !name.startsWith("_") && name.endsWith(".js")
+//                        && !excludedTests.contains(name);
+                return name.startsWith("update") && name.endsWith(".js")
                         && !excludedTests.contains(name);
             }
 

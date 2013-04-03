@@ -116,6 +116,9 @@ public class MongoScope extends Global {
         if (!isInitialized()) {
             super.init(context);
         }
+
+        System.setProperty("DEBUG.MONGO", Boolean.TRUE.toString());
+        System.setProperty("DB.TRACE", Boolean.TRUE.toString());
         // context.setOptimizationLevel(-1);
 
         String[] names = {
@@ -213,7 +216,13 @@ public class MongoScope extends Global {
             System.out.println(me.getCode() + " -> " + me.getMessage());
             // check error codes that do NOT result in an exception
             switch (me.getCode()) {
-            case 10088:
+            case 10088:     // 
+            case 10148:     // Mod on _id not allowed
+            case 10149:     // Invalid mod field name, may not end in a period
+            case 10159:     // multi update only works with $ operators
+            case 15896:     // Modified field name may not start with $
+            case 16650:     // Cannot apply the positional operator without a corresponding query field containing an array.
+            case 10141:     // Cannot apply $push/$pushAll modifier to non-array
                 System.out.println(me.getMessage());
                 return;
             default:
