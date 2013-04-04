@@ -70,5 +70,9 @@ public class MongoRuntime {
     public static Object call(MongoAction action) {
         return globalRuntime.contextFactory.call(action);
     }
+    
+    public static void rebuild() {
+        globalRuntime = new MongoRuntime();
+    }
 
 }

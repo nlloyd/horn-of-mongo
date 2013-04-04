@@ -88,8 +88,8 @@ public class Mongo extends ScriptableObject {
         if (rawFields instanceof DBObject)
             bsonFields = (DBObject) rawFields;
 
-        System.out.printf("find(%s, %s, %s, %d, %d, %d, %d)\n", ns, bsonQuery, bsonFields, limit, skip, batchSize,
-                options);
+//        System.out.printf("find(%s, %s, %s, %d, %d, %d, %d)\n", ns, bsonQuery, bsonFields, limit, skip, batchSize,
+//                options);
 
         com.mongodb.DB db = innerMongo.getDB(ns.substring(0, ns.indexOf('.')));
         String collectionName = ns.substring(ns.indexOf('.') + 1);
@@ -121,7 +121,7 @@ public class Mongo extends ScriptableObject {
         if (rawObj instanceof DBObject)
             bsonObj = (DBObject) rawObj;
 
-        System.out.printf("insert(%s, %s)\n", ns, bsonObj);
+//        System.out.printf("insert(%s, %s)\n", ns, bsonObj);
 
         try {
             // unfortunately the Java driver does not expose the _allow_dot
@@ -159,7 +159,7 @@ public class Mongo extends ScriptableObject {
         if (rawPattern instanceof DBObject)
             bsonPattern = (DBObject) rawPattern;
 
-        System.out.printf("remove(%s, %s)\n", ns, bsonPattern);
+//        System.out.printf("remove(%s, %s)\n", ns, bsonPattern);
 
         com.mongodb.DB db = innerMongo.getDB(ns.substring(0, ns.indexOf('.')));
         DBCollection collection = db.getCollection(ns.substring(ns.indexOf('.') + 1));
@@ -185,14 +185,14 @@ public class Mongo extends ScriptableObject {
         boolean upsertOp = (upsert != null) ? upsert : false;
         boolean multiOp = (multi != null) ? multi : false;
         
-        System.out.printf("update(%s, %s, %s, %b)\n", ns, bsonQuery, bsonObj, upsert);
+//        System.out.printf("update(%s, %s, %s, %b)\n", ns, bsonQuery, bsonObj, upsert);
 
         com.mongodb.DB db = innerMongo.getDB(ns.substring(0, ns.indexOf('.')));
         DBCollection collection = db.getCollection(ns.substring(ns.indexOf('.') + 1));
 
         try {
             WriteResult result = collection.update(bsonQuery, bsonObj, upsertOp, multiOp);
-            System.out.println(result);
+//            System.out.println(result);
         } catch (MongoException me) {
             handleMongoException(me);
         }

@@ -117,8 +117,6 @@ public class MongoScope extends Global {
             super.init(context);
         }
 
-        System.setProperty("DEBUG.MONGO", Boolean.TRUE.toString());
-        System.setProperty("DB.TRACE", Boolean.TRUE.toString());
         // context.setOptimizationLevel(-1);
 
         String[] names = {
@@ -216,7 +214,7 @@ public class MongoScope extends Global {
             System.out.println(me.getCode() + " -> " + me.getMessage());
             // check error codes that do NOT result in an exception
             switch (me.getCode()) {
-            case 10088:     // 
+            case 10088:     // cannot index parallel arrays [b] [d]
             case 10148:     // Mod on _id not allowed
             case 10149:     // Invalid mod field name, may not end in a period
             case 10159:     // multi update only works with $ operators
