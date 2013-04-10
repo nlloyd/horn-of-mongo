@@ -19,22 +19,31 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-package org.github.nlloyd.hornofmongo.action;
+package org.github.nlloyd.hornofmongo;
 
-import org.github.nlloyd.hornofmongo.MongoScope;
-import org.mozilla.javascript.ContextAction;
-import org.mozilla.javascript.Scriptable;
+import static org.mozilla.javascript.Context.FEATURE_WARNING_AS_ERROR;
+
+import org.mozilla.javascript.Context;
+import org.mozilla.javascript.ContextFactory;
 
 /**
  * @author nlloyd
- *
+ * 
  */
-public abstract class MongoAction implements ContextAction {
-	
-	protected Scriptable mongoScope;
-	
-	public MongoAction(MongoScope mongoScope) {
-		this.mongoScope = mongoScope;
-	}
+public class MongoContextFactory extends ContextFactory {
+
+    /**
+     * Override {@link #hasFeature(Context, int)}
+     * 
+     * Enables {@link Context#FEATURE_WARNING_AS_ERROR}.
+     */
+    @Override
+    public boolean hasFeature(Context cx, int featureIndex) {
+        switch (featureIndex) {
+        case FEATURE_WARNING_AS_ERROR:
+            return true;
+        }
+        return super.hasFeature(cx, featureIndex);
+    }
 
 }

@@ -32,7 +32,8 @@ import java.util.List;
 import java.util.Map;
 
 import org.github.nlloyd.hornofmongo.action.MongoScriptAction;
-import org.junit.BeforeClass;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -49,15 +50,21 @@ public class JSTest {
     private static File cwd = null;
 
     /**
-     * Tests containing not-supported official mongodb shell features
-     * <ul>
-     * <li>basicc.js : because function startMongoProgramNoConnect() is not
-     * supported</li>
-     * <li>updatef.js : because function startParallelShell() is not supported</li>
-     * </ul>
+     * Tests containing currently unsupported/unimplemented official mongodb
+     * shell features such as:
+     * 
+     * startMongoProgramNoConnect() startParallelShell()
      */
     public static final List<String> excludedTests = Arrays
-            .asList(new String[] { "basicc.js", "updatef.js" });
+            .asList(new String[] { "basicc.js", "connections_opened.js",
+                    "count8.js", "coveredIndex3.js", "currentop.js",
+                    "cursora.js", "distinct3.js", "drop2.js", "evalc.js",
+                    "evald.js", "explain3.js", "group7.js", "index12.js",
+                    "killop.js", "loadserverscripts.js", "mr_drop.js",
+                    "mr_killop.js", "orm.js", "orn.js", "queryoptimizer3.js",
+                    "queryoptimizer5.js", "remove9.js", "removeb.js",
+                    "removec.js", "shellkillop.js", "shellstartparallel.js",
+                    "shellspawn.js", "updatef.js" });
 
     /**
      * Tests that throw an expected exception (whether by design or observed but
@@ -79,23 +86,6 @@ public class JSTest {
                         "[{\n\t\"_id\" : 1,\n\t\"title\" : \"ABC\",\n\t\"comments\" : [\n\t\t{\n\t\t\t\"by\" : \"joe\",\n\t\t\t\"votes\" : 4\n\t\t},\n\t\t{\n\t\t\t\"by\" : \"jane\",\n\t\t\t\"votes\" : 7\n\t\t}\n\t]\n}] != [{\n\t\"_id\" : 1,\n\t\"comments\" : [\n\t\t{\n\t\t\t\"by\" : \"joe\",\n\t\t\t\"votes\" : 4\n\t\t},\n\t\t{\n\t\t\t\"by\" : \"jane\",\n\t\t\t\"votes\" : 7\n\t\t}\n\t],\n\t\"title\" : \"ABC\"\n}] are not equal : A2 (mongodb/assert.js#6)");
     }
 
-    /**
-     * @throws java.lang.Exception
-     */
-    @BeforeClass
-    public static void setUpBeforeClass() throws Exception {
-//        System.setProperty("DEBUG.MONGO", Boolean.TRUE.toString());
-//        System.setProperty("DB.TRACE", Boolean.TRUE.toString());
-
-        MongoRuntime.rebuild();
-        
-        // set the exception handling behavior of the test runtime to mimic the
-        // official mongo shell client
-        MongoRuntime.getMongoScope().setMimicShellExceptionBehavior(true);
-        MongoRuntime.call(new MongoScriptAction("connect",
-                "var db = connect('test',null,null);"));
-    }
-
     @Parameters(name = "{0}")
     public static Iterable<Object[]> getJsTestScripts() {
         if (cwd == null)
@@ -108,7 +98,7 @@ public class JSTest {
             public boolean accept(File dir, String name) {
                 return !name.startsWith("_") && name.endsWith(".js")
                         && !excludedTests.contains(name);
-//                 return name.startsWith("auth") && name.endsWith(".js")
+//                 return name.startsWith("fsync2") && name.endsWith(".js")
 //                 && !excludedTests.contains(name);
             }
 
@@ -124,15 +114,39 @@ public class JSTest {
     }
 
     private File jsTestFile = null;
+    
+    private MongoScope testScope;
 
     public JSTest(String jsTestFileName, File jsTestFile) {
         this.jsTestFile = jsTestFile;
     }
 
+    /**
+     * @throws java.lang.Exception
+     */
+    @Before
+    public void setUp() throws Exception {
+//         System.setProperty("DEBUG.MONGO", Boolean.TRUE.toString());
+//         System.setProperty("DB.TRACE", Boolean.TRUE.toString());
+
+        testScope = MongoRuntime.createMongoScope();
+        // set the exception handling behavior of the test runtime to mimic the
+        // official mongo shell client
+        testScope.setUseMongoShellWriteConcern(true);
+        testScope.setMimicShellExceptionBehavior(true);
+    }
+    
+    @After
+    public void cleanup() {
+        testScope.cleanup();
+    }
+
     @Test
     public void test() throws Exception {
         try {
-            MongoRuntime.call(new MongoScriptAction(jsTestFile));
+            MongoRuntime.call(new MongoScriptAction(testScope, "connect",
+                    "var db = connect('test',null,null);"));
+            MongoRuntime.call(new MongoScriptAction(testScope, jsTestFile));
         } catch (Exception e) {
             // a few tests throw expected exceptions
             if (expectedExceptionTests.contains(jsTestFile.getName())) {

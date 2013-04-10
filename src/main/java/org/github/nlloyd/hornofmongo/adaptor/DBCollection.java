@@ -33,7 +33,7 @@ import org.mozilla.javascript.annotations.JSConstructor;
  * @author nlloyd
  * 
  */
-public class DBCollection extends ScriptableObject {
+public class DBCollection extends ScriptableMongoObject {
 
 	/**
 	 * 
@@ -84,7 +84,7 @@ public class DBCollection extends ScriptableObject {
 				&& !ScriptableObject.hasProperty(this, name)) {
 			String shortName = Context.toString(this.shortName + "." + name);
 			String fullName = Context.toString(this.db.name + "." + shortName);
-			property = MongoRuntime.call(new NewInstanceAction("DBCollection",
+			property = MongoRuntime.call(new NewInstanceAction(mongoScope, "DBCollection",
 					new Object[] { mongo, this.db, shortName, fullName }));
 			this.put(name, this, property);
 		}

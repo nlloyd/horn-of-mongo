@@ -30,6 +30,7 @@ import java.util.regex.Pattern;
 import org.bson.BSONObject;
 import org.bson.types.Symbol;
 import org.github.nlloyd.hornofmongo.MongoRuntime;
+import org.github.nlloyd.hornofmongo.MongoScope;
 import org.github.nlloyd.hornofmongo.action.MongoAction;
 import org.github.nlloyd.hornofmongo.action.NewInstanceAction;
 import org.github.nlloyd.hornofmongo.adaptor.ObjectId;
@@ -89,39 +90,39 @@ public class BSONizer {
 		return bsonObject;
 	}
 
-	public static Object convertBSONtoJS(Object bsonObject) {
+	public static Object convertBSONtoJS(MongoScope mongoScope, Object bsonObject) {
 		Object jsObject = null;
 		if(bsonObject instanceof List<?>) {
 			List<?> bsonList = (List<?>)bsonObject;
-			Scriptable jsArray = (Scriptable)MongoRuntime.call(new NewInstanceAction(bsonList.size()));
+			Scriptable jsArray = (Scriptable)MongoRuntime.call(new NewInstanceAction(mongoScope, bsonList.size()));
 
 			int index = 0;
 			for(Object bsonEntry : bsonList) {
-				ScriptableObject.putProperty(jsArray, index, convertBSONtoJS(bsonEntry));
+				ScriptableObject.putProperty(jsArray, index, convertBSONtoJS(mongoScope, bsonEntry));
 				index++;
 			}
 			
 			jsObject = jsArray;
 		} else if(bsonObject instanceof BSONObject) {
-			Scriptable jsObj = (Scriptable)MongoRuntime.call(new NewInstanceAction());
+			Scriptable jsObj = (Scriptable)MongoRuntime.call(new NewInstanceAction(mongoScope));
 			BSONObject  bsonObj = (BSONObject)bsonObject;
 			
 			for(String key : bsonObj.keySet()) {
-				Object value = convertBSONtoJS(bsonObj.get(key));
+				Object value = convertBSONtoJS(mongoScope, bsonObj.get(key));
 				MongoRuntime.call(new JSPopulatePropertyAction(jsObj, key, value));
 			}
 			jsObject = jsObj;
 		} else if(bsonObject instanceof Symbol) {
 			jsObject = ((Symbol)bsonObject).getSymbol();
 		} else if(bsonObject instanceof Date) {
-			jsObject = MongoRuntime.call(new NewInstanceAction("Date", new Object[]{((Date)bsonObject).getTime()}));
+			jsObject = MongoRuntime.call(new NewInstanceAction(mongoScope, "Date", new Object[]{((Date)bsonObject).getTime()}));
 		} else if(bsonObject instanceof Pattern) {
 			Pattern regex = (Pattern)bsonObject;
 			String source = regex.pattern();
 			String options = Bytes.regexFlags(regex.flags());
-			jsObject = MongoRuntime.call(new NewInstanceAction("RegExp", new Object[]{source, options}));
+			jsObject = MongoRuntime.call(new NewInstanceAction(mongoScope, "RegExp", new Object[]{source, options}));
 		} else if(bsonObject instanceof org.bson.types.ObjectId) {
-			jsObject = MongoRuntime.call(new NewInstanceAction("ObjectId", new Object[]{bsonObject}));
+			jsObject = MongoRuntime.call(new NewInstanceAction(mongoScope, "ObjectId", new Object[]{bsonObject}));
 		} else {
 			jsObject = bsonObject;
 		}
@@ -136,6 +137,7 @@ public class BSONizer {
 	    private Object value;
 	    
 	    public JSPopulatePropertyAction(Scriptable obj, Object key, Object value) {
+	        super(null);
 	        this.obj = obj;
 	        this.key = key;
 	        this.value = value;

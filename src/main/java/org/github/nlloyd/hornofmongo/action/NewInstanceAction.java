@@ -43,23 +43,8 @@ public class NewInstanceAction extends MongoAction {
 	/**
 	 * Constructor for a NewInstanceAction that will produce a basic native JS object instance.
 	 */
-	public NewInstanceAction() {
-		super();
-	}
-
-	/**
-	 * Constructor for a NewInstanceAction that will produce a basic native JS object instance.
-	 */
 	public NewInstanceAction(MongoScope mongoScope) {
 		super(mongoScope);
-	}
-	
-	/**
-	 * Constructor for a NewInstanceAction that will produce a JS Array instance.
-	 */
-	public NewInstanceAction(int arrayLength) {
-		super();
-		this.arrayLength = arrayLength;
 	}
 
 	/**
@@ -70,14 +55,6 @@ public class NewInstanceAction extends MongoAction {
 		this.arrayLength = arrayLength;
 	}
 	
-	/**
-	 * Constructor for a NewInstanceAction that will produce a JS instance using the
-	 * named JS constructor.
-	 */
-	public NewInstanceAction(String constructor) {
-		super();
-		this.constructor = constructor;
-	}
 	
 	/**
 	 * Constructor for a NewInstanceAction that will produce a JS instance using the
@@ -86,16 +63,6 @@ public class NewInstanceAction extends MongoAction {
 	public NewInstanceAction(MongoScope mongoScope, String constructor) {
 		super(mongoScope);
 		this.constructor = constructor;
-	}
-	
-	/**
-	 * Constructor for a NewInstanceAction that will produce a JS instance using the
-	 * named JS constructor and the provided arguments.
-	 */
-	public NewInstanceAction(String constructor, Object[] args) {
-		super();
-		this.constructor = constructor;
-		this.constructorArgs = args;
 	}
 	
 	/**

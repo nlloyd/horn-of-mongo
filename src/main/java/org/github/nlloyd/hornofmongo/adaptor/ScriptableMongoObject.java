@@ -19,22 +19,40 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-package org.github.nlloyd.hornofmongo.action;
+package org.github.nlloyd.hornofmongo.adaptor;
 
 import org.github.nlloyd.hornofmongo.MongoScope;
-import org.mozilla.javascript.ContextAction;
+import org.github.nlloyd.hornofmongo.exception.MongoRuntimeException;
 import org.mozilla.javascript.Scriptable;
+import org.mozilla.javascript.ScriptableObject;
 
 /**
  * @author nlloyd
  *
  */
-public abstract class MongoAction implements ContextAction {
-	
-	protected Scriptable mongoScope;
-	
-	public MongoAction(MongoScope mongoScope) {
-		this.mongoScope = mongoScope;
-	}
+public abstract class ScriptableMongoObject extends ScriptableObject {
+    
+    /**
+     * 
+     */
+    private static final long serialVersionUID = 839135097878723000L;
 
+    /**
+     * Reference to the owning {@link MongoScope} to check for certain
+     * scope-level behavior flags.
+     */
+    protected MongoScope mongoScope;
+
+    /**
+     * Overrides {@link ScriptableObject}
+     */
+    @Override
+    public void setParentScope(Scriptable m) {
+        super.setParentScope(m);
+        Scriptable topScope = ScriptableObject.getTopLevelScope(m);
+        if(topScope instanceof MongoScope)
+            mongoScope =  (MongoScope)topScope;
+        else
+            throw new MongoRuntimeException(this.getClass().getName() + " was not created within a MongoScope!");
+    }
 }

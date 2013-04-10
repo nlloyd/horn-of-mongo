@@ -39,27 +39,10 @@ public class CallMethodAction extends MongoAction {
 	/**
 	 * Constructor for a CallMethodAction that will produce a basic native JS object instance.
 	 */
-	public CallMethodAction(Scriptable object, String method) {
-		this(object, method, new Object[]{});
-	}
-
-	/**
-	 * Constructor for a CallMethodAction that will produce a basic native JS object instance.
-	 */
 	public CallMethodAction(MongoScope mongoScope, Scriptable object, String method) {
 		this(mongoScope, object, method, new Object[]{});
 	}
 	
-	/**
-	 * Constructor for a CallMethodAction that will produce a basic native JS object instance.
-	 */
-	public CallMethodAction(Scriptable object, String method, Object[] args) {
-		super();
-		this.object = object;
-		this.method = method;
-		this.methodArgs = args;
-	}
-
 	/**
 	 * Constructor for a CallMethodAction that will produce a basic native JS object instance.
 	 */

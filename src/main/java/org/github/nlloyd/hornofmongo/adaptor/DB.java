@@ -35,65 +35,64 @@ import org.mozilla.javascript.annotations.JSConstructor;
  * DB JavaScriptable implementation to support dynamic collection creation on
  * property access.
  * 
- * This class is associated with the MongoDB JavaScript API as opposed to the 
+ * This class is associated with the MongoDB JavaScript API as opposed to the
  * MongoDB Java Driver.
  * 
  * @author nlloyd
- *
+ * 
  */
-public class DB extends ScriptableObject {
+public class DB extends ScriptableMongoObject {
 
-	/**
+    /**
 	 * 
 	 */
-	private static final long serialVersionUID = 3314929237218125656L;
-	
-	protected Mongo mongo;
-	protected String name;
-	
-	public DB() {}
-	
-	@JSConstructor
-	public DB(Mongo mongo, String name) {
-		super();
-		this.mongo = mongo;
-		this.name = name;
-		if(StringUtils.isBlank(name))
-			throw new IllegalArgumentException("DB name must be provided");
-		put("_mongo", this, this.mongo);
-		put("_name", this, this.name);
-	}
+    private static final long serialVersionUID = 3314929237218125656L;
 
-	/**
-	 * @see org.mozilla.javascript.ScriptableObject#getClassName()
-	 */
-	@Override
-	public String getClassName() {
-		return this.getClass().getSimpleName();
-	}
-	
-	/**
-	 * Returns either the JavaScript property if it exists or a new {@link DBCollection} instance
-	 * with the provided name.
-	 * 
-	 * @see org.mozilla.javascript.ScriptableObject#get(java.lang.String, org.mozilla.javascript.Scriptable)
-	 */
-	@Override
-	public Object get(String name, Scriptable start) {
-		Object property = super.get(name, start);
-		if((property == ScriptableObject.NOT_FOUND)
-				&& this.equals(start)
-				&& !isSpecialName(name)
-				&& !ScriptableObject.hasProperty(this, name)) {
-			property = MongoRuntime.call(new NewInstanceAction("DBCollection", new Object[]{
-	    			mongo, 
-	    			this, 
-	    			Context.toString(name), 
-	    			Context.toString(this.name + "." + name)
-			}));
-			this.put(name, this, property);
-		}
-		return property;
-	}
+    protected Mongo mongo;
+    protected String name;
+
+    public DB() {
+    }
+
+    @JSConstructor
+    public DB(Mongo mongo, String name) {
+        super();
+        this.mongo = mongo;
+        this.name = name;
+        if (StringUtils.isBlank(name))
+            throw new IllegalArgumentException("DB name must be provided");
+        put("_mongo", this, this.mongo);
+        put("_name", this, this.name);
+    }
+
+    /**
+     * @see org.mozilla.javascript.ScriptableObject#getClassName()
+     */
+    @Override
+    public String getClassName() {
+        return this.getClass().getSimpleName();
+    }
+
+    /**
+     * Returns either the JavaScript property if it exists or a new
+     * {@link DBCollection} instance with the provided name.
+     * 
+     * @see org.mozilla.javascript.ScriptableObject#get(java.lang.String,
+     *      org.mozilla.javascript.Scriptable)
+     */
+    @Override
+    public Object get(String name, Scriptable start) {
+        Object property = super.get(name, start);
+        if ((property == ScriptableObject.NOT_FOUND) && this.equals(start)
+                && !isSpecialName(name)
+                && !ScriptableObject.hasProperty(this, name)) {
+            property = MongoRuntime.call(new NewInstanceAction(
+                    mongoScope, "DBCollection", new Object[] { mongo, this,
+                            Context.toString(name),
+                            Context.toString(this.name + "." + name) }));
+            this.put(name, this, property);
+        }
+        return property;
+    }
 
 }

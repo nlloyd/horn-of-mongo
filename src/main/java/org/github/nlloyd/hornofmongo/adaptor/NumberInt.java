@@ -22,7 +22,6 @@
 package org.github.nlloyd.hornofmongo.adaptor;
 
 import org.mozilla.javascript.Context;
-import org.mozilla.javascript.ScriptableObject;
 import org.mozilla.javascript.annotations.JSConstructor;
 import org.mozilla.javascript.annotations.JSFunction;
 
@@ -30,7 +29,7 @@ import org.mozilla.javascript.annotations.JSFunction;
  * @author nlloyd
  *
  */
-public class NumberInt extends ScriptableObject {
+public class NumberInt extends ScriptableMongoObject {
 	
 	/**
 	 * 

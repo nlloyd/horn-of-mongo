@@ -26,6 +26,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.lang.reflect.InvocationTargetException;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.apache.log4j.Logger;
 import org.github.nlloyd.hornofmongo.adaptor.BinData;
@@ -84,6 +86,19 @@ public class MongoScope extends Global {
      */
     private boolean mimicShellExceptionBehavior = false;
 
+    /**
+     * {@link http
+     * ://docs.mongodb.org/manual/release-notes/drivers-write-concern/}
+     * 
+     * Default write concern has changed for all official mongo drivers, which
+     * differs from the default mongo shell behavior. Set this flag to true
+     * configure this MongoScope to behave like mongo shell as opposed to mongo
+     * java driver (defaults to false).
+     */
+    private boolean useMongoShellWriteConcern = false;
+
+    private Set<com.mongodb.Mongo> openedDriverConnections = new HashSet<com.mongodb.Mongo>();
+
     public MongoScope() {
         super();
     }
@@ -111,6 +126,31 @@ public class MongoScope extends Global {
         this.mimicShellExceptionBehavior = mimicShellExceptionBehavior;
     }
 
+    /**
+     * @return the useMongoShellWriteConcern
+     */
+    public boolean useMongoShellWriteConcern() {
+        return useMongoShellWriteConcern;
+    }
+
+    /**
+     * @param useMongoShellWriteConcern
+     *            the useMongoShellWriteConcern to set
+     */
+    public void setUseMongoShellWriteConcern(boolean useMongoShellWriteConcern) {
+        this.useMongoShellWriteConcern = useMongoShellWriteConcern;
+    }
+
+    public void addOpenedConnection(com.mongodb.Mongo mongoConnection) {
+        openedDriverConnections.add(mongoConnection);
+    }
+
+    public void cleanup() {
+        for (com.mongodb.Mongo connection : openedDriverConnections) {
+            connection.close();
+        }
+    }
+
     protected void initMongoJS(Context context) throws IllegalAccessException,
             InstantiationException, InvocationTargetException {
         if (!isInitialized()) {
@@ -119,14 +159,9 @@ public class MongoScope extends Global {
 
         // context.setOptimizationLevel(-1);
 
-        String[] names = {
-                "sleep",
-                "hex_md5",
-                "_isWindows"
-        };
+        String[] names = { "sleep", "hex_md5", "_isWindows" };
         defineFunctionProperties(names, this.getClass(),
                 ScriptableObject.DONTENUM);
-        
 
         ScriptableObject.defineClass(this, Mongo.class, false, false);
         ScriptableObject.defineClass(this, ObjectId.class, false, false);
@@ -214,13 +249,15 @@ public class MongoScope extends Global {
             System.out.println(me.getCode() + " -> " + me.getMessage());
             // check error codes that do NOT result in an exception
             switch (me.getCode()) {
-            case 10088:     // cannot index parallel arrays [b] [d]
-            case 10148:     // Mod on _id not allowed
-            case 10149:     // Invalid mod field name, may not end in a period
-            case 10159:     // multi update only works with $ operators
-            case 15896:     // Modified field name may not start with $
-            case 16650:     // Cannot apply the positional operator without a corresponding query field containing an array.
-            case 10141:     // Cannot apply $push/$pushAll modifier to non-array
+            case 10088: // cannot index parallel arrays [b] [d]
+            case 10148: // Mod on _id not allowed
+            case 10149: // Invalid mod field name, may not end in a period
+            case 10159: // multi update only works with $ operators
+            case 15896: // Modified field name may not start with $
+            case 16650: // Cannot apply the positional operator without a
+                        // corresponding query field containing an array.
+            case 10141: // Cannot apply $push/$pushAll modifier to non-array
+            case 16734: // Unknown index plugin '*' in index { *: * }
                 System.out.println(me.getMessage());
                 return;
             default:
@@ -252,9 +289,10 @@ public class MongoScope extends Global {
         final String str = Context.toString(args[0]);
         return Util.hexMD5(str.getBytes());
     }
-    
-    public static Boolean _isWindows(Context cx, Scriptable thisObj, Object[] args,
-            Function funObj) {
+
+    public static Boolean _isWindows(Context cx, Scriptable thisObj,
+            Object[] args, Function funObj) {
         return System.getProperty("os.name").startsWith("Windows");
     }
+
 }

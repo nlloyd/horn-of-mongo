@@ -35,7 +35,7 @@ import com.mongodb.MongoException;
  * @author nlloyd
  * 
  */
-public class InternalCursor extends ScriptableObject {
+public class InternalCursor extends ScriptableMongoObject {
 
 	/**
 	 * 
@@ -51,12 +51,6 @@ public class InternalCursor extends ScriptableObject {
 	 */
 	private Object fauxFindOneResult;
 	private boolean fauxFindOneReturned = false;
-
-	/**
-	 * Reference to the owning {@link MongoScope} to check for certain
-	 * scope-level behavior flags.
-	 */
-	protected MongoScope mongoScope;
 
 	public InternalCursor() {}
 
@@ -103,7 +97,7 @@ public class InternalCursor extends ScriptableObject {
 			}
 		} else {
 			try {
-				next = BSONizer.convertBSONtoJS(cursor.next());
+				next = BSONizer.convertBSONtoJS(mongoScope, cursor.next());
 			} catch (MongoException me) {
 				handleMongoException(me);
 			}

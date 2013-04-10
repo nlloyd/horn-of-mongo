@@ -24,7 +24,6 @@ package org.github.nlloyd.hornofmongo.adaptor;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Hex;
 import org.mozilla.javascript.Context;
-import org.mozilla.javascript.ScriptableObject;
 import org.mozilla.javascript.annotations.JSConstructor;
 import org.mozilla.javascript.annotations.JSFunction;
 
@@ -32,7 +31,7 @@ import org.mozilla.javascript.annotations.JSFunction;
  * @author nlloyd
  *
  */
-public class BinData extends ScriptableObject {
+public class BinData extends ScriptableMongoObject {
 	
 	private int type;
 	private byte[] data;

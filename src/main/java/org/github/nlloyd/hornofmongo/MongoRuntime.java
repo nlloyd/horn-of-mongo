@@ -24,55 +24,68 @@ package org.github.nlloyd.hornofmongo;
 import java.lang.reflect.InvocationTargetException;
 
 import org.github.nlloyd.hornofmongo.action.MongoAction;
+import org.github.nlloyd.hornofmongo.exception.MongoScopeException;
 import org.mozilla.javascript.Context;
-import org.mozilla.javascript.ContextAction;
 import org.mozilla.javascript.ContextFactory;
 
 /**
- * Runtime class for MongoDB that initializes and grants access to the global
- * MongoDB JavaScript scope.
+ * Runtime class for the Horn of Mongo client library that initializes the
+ * global {@link ContextFactory} and provides convenience methods for executing
+ * JS scripts with mongodb JSAPI code.
  * 
  * @author nlloyd
  * 
  */
 public class MongoRuntime {
 
-    protected static MongoRuntime globalRuntime = new MongoRuntime();
+    /**
+     * Creates a newly initialized {@link MongoScope} instance. This will use
+     * {@link MongoRuntime#call(MongoAction)} to initialize the
+     * {@link MongoScope} instance, possibly resulting in the global
+     * {@link MongoContextFactory} being set.
+     * 
+     * @return
+     */
+    public static final MongoScope createMongoScope() {
+        MongoScope mongoScope = (MongoScope) call(new MongoAction(null) {
 
-    private MongoScope scope;
-    private ContextFactory contextFactory = new ContextFactory();
-
-    protected MongoRuntime() {
-        scope = (MongoScope) contextFactory.call(new ContextAction() {
-
+            @Override
             public Object run(Context cx) {
-                Object scope = null;
                 try {
-                    scope = new MongoScope(cx);
+                    return new MongoScope(cx);
                 } catch (IllegalAccessException e) {
-                    e.printStackTrace();
+                    throw new MongoScopeException(
+                            "caught when attempting to create a new MongoScope",
+                            e);
                 } catch (InstantiationException e) {
-                    e.printStackTrace();
+                    throw new MongoScopeException(
+                            "caught when attempting to create a new MongoScope",
+                            e);
                 } catch (InvocationTargetException e) {
-                    e.printStackTrace();
+                    throw new MongoScopeException(
+                            "caught when attempting to create a new MongoScope",
+                            e);
                 }
-
-                return scope;
             }
 
         });
+        
+        return mongoScope;
     }
 
-    public static MongoScope getMongoScope() {
-        return globalRuntime.scope;
-    }
-
-    public static Object call(MongoAction action) {
-        return globalRuntime.contextFactory.call(action);
-    }
-    
-    public static void rebuild() {
-        globalRuntime = new MongoRuntime();
+    /**
+     * Convenience method to call the {@link MongoAction} using the global
+     * {@link ContextFactory}. The global {@link ContextFactory} has not
+     * explicitly been set yet then this method will set an instance of
+     * {@link MongoContextFactory} as the global {@link ContextFactory}.
+     * 
+     * @param mongoAction
+     * @return
+     */
+    public static final Object call(MongoAction mongoAction) {
+        if (!ContextFactory.hasExplicitGlobal())
+            ContextFactory.initGlobal(new MongoContextFactory());
+        return ContextFactory.getGlobal().call(mongoAction);
     }
 
 }

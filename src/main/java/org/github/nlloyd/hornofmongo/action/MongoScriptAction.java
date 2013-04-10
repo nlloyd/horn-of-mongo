@@ -47,48 +47,6 @@ public class MongoScriptAction extends MongoAction {
 	protected String scriptString = null;
 	protected Reader scriptReader = null;
 	
-	public MongoScriptAction(String script) {
-		super();
-		this.scriptString = script;
-	}
-	
-	public MongoScriptAction(File script) {
-		super();
-		this.scriptName = script.getName();
-		try {
-			this.scriptReader = new BufferedReader(new FileReader(script));
-		} catch (FileNotFoundException e) {
-			throw new MongoException("Attempted to execute non-existent file " + script.getAbsolutePath(), e);
-		}
-	}
-	
-	public MongoScriptAction(Reader script) {
-		super();
-		this.scriptReader = script;
-	}
-	
-	public MongoScriptAction(String name, String script) {
-		super();
-		this.scriptName = name;
-		this.scriptString = script;
-	}
-	
-	public MongoScriptAction(String name, File script) {
-		super();
-		this.scriptName = name;
-		try {
-			this.scriptReader = new BufferedReader(new FileReader(script));
-		} catch (FileNotFoundException e) {
-			throw new MongoException("Attempted to execute non-existent file " + script.getAbsolutePath(), e);
-		}
-	}
-	
-	public MongoScriptAction(String name, Reader script) {
-		super();
-		this.scriptName = name;
-		this.scriptReader = script;
-	}
-	
 	public MongoScriptAction(MongoScope mongoScope, String script) {
 		super(mongoScope);
 		this.scriptString = script;
