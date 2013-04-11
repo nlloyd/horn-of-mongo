@@ -76,8 +76,12 @@ public class ObjectId extends ScriptableMongoObject {
 		return Context.toString(this.realObjectId.toString());
 	}
 	
-	public org.bson.types.ObjectId getWrappedObjectId() {
+	public org.bson.types.ObjectId getRealObjectId() {
 		return realObjectId;
+	}
+	
+	public void setRealObjectId(org.bson.types.ObjectId oid) {
+	    realObjectId = oid;
 	}
 
 }

@@ -99,10 +99,8 @@ public class JSTest {
             @Override
             public boolean accept(File dir, String name) {
                  return !name.startsWith("_") && name.endsWith(".js")
-                         && (name.startsWith("auth1") || name.startsWith("autoid"))
+//                         && (name.startsWith("auth1") || name.startsWith("autoid"))
                          && !excludedTests.contains(name);
-//                return name.startsWith("auth1") && name.endsWith(".js")
-//                            && !excludedTests.contains(name);
             }
 
         });

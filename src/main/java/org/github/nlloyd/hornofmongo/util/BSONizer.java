@@ -69,7 +69,7 @@ public class BSONizer {
             
             bsonObject = Pattern.compile(source.toString(), Bytes.regexFlags(options));;
         } else if(jsObject instanceof ObjectId) {
-        	bsonObject = ((ObjectId)jsObject).getWrappedObjectId();
+        	bsonObject = ((ObjectId)jsObject).getRealObjectId();
 		} else if(jsObject instanceof NativeObject) {
 			BasicDBObject bson = new BasicDBObject();
 			bsonObject = bson;
@@ -122,7 +122,8 @@ public class BSONizer {
 			String options = Bytes.regexFlags(regex.flags());
 			jsObject = MongoRuntime.call(new NewInstanceAction(mongoScope, "RegExp", new Object[]{source, options}));
 		} else if(bsonObject instanceof org.bson.types.ObjectId) {
-			jsObject = MongoRuntime.call(new NewInstanceAction(mongoScope, "ObjectId", new Object[]{bsonObject.toString()}));
+			jsObject = MongoRuntime.call(new NewInstanceAction(mongoScope, "ObjectId"));
+			((ObjectId)jsObject).setRealObjectId((org.bson.types.ObjectId)bsonObject);
 		} else {
 			jsObject = bsonObject;
 		}
