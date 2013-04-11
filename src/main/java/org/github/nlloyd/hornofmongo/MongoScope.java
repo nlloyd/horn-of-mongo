@@ -33,12 +33,15 @@ import org.apache.log4j.Logger;
 import org.github.nlloyd.hornofmongo.adaptor.BinData;
 import org.github.nlloyd.hornofmongo.adaptor.DB;
 import org.github.nlloyd.hornofmongo.adaptor.DBCollection;
+import org.github.nlloyd.hornofmongo.adaptor.DBPointer;
 import org.github.nlloyd.hornofmongo.adaptor.DBQuery;
+import org.github.nlloyd.hornofmongo.adaptor.DBRef;
 import org.github.nlloyd.hornofmongo.adaptor.InternalCursor;
 import org.github.nlloyd.hornofmongo.adaptor.Mongo;
 import org.github.nlloyd.hornofmongo.adaptor.NumberInt;
 import org.github.nlloyd.hornofmongo.adaptor.NumberLong;
 import org.github.nlloyd.hornofmongo.adaptor.ObjectId;
+import org.github.nlloyd.hornofmongo.adaptor.Timestamp;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Function;
 import org.mozilla.javascript.JavaScriptException;
@@ -145,10 +148,16 @@ public class MongoScope extends Global {
         openedDriverConnections.add(mongoConnection);
     }
 
+    public void closeConnection(com.mongodb.Mongo mongoConnection) {
+        openedDriverConnections.remove(mongoConnection);
+        mongoConnection.close();
+    }
+    
     public void cleanup() {
         for (com.mongodb.Mongo connection : openedDriverConnections) {
             connection.close();
         }
+        openedDriverConnections.clear();
     }
 
     protected void initMongoJS(Context context) throws IllegalAccessException,
@@ -169,55 +178,14 @@ public class MongoScope extends Global {
         ScriptableObject.defineClass(this, DBCollection.class, false, false);
         ScriptableObject.defineClass(this, InternalCursor.class, false, false);
         ScriptableObject.defineClass(this, DBQuery.class, false, false);
+        ScriptableObject.defineClass(this, DBPointer.class, false, false);
         ScriptableObject.defineClass(this, BinData.class, false, false);
 
+        ScriptableObject.defineClass(this, Timestamp.class, false, false);
         ScriptableObject.defineClass(this, NumberLong.class, false, false);
         ScriptableObject.defineClass(this, NumberInt.class, false, false);
-
-        // assert( JS_InitClass( cx , global , 0 , &mongo_class , local ?
-        // mongo_local_constructor : mongo_external_constructor , 0 , 0 ,
-        // mongo_functions , 0 , 0 ) );
-        //
-        // assert( JS_InitClass( cx , global , 0 , &object_id_class ,
-        // object_id_constructor , 0 , 0 , object_id_functions , 0 , 0 ) );
-        // assert( JS_InitClass( cx , global , 0 , &db_class , db_constructor ,
-        // 2 , 0 , 0 , 0 , 0 ) );
-        // XXXXXXassert( JS_InitClass( cx , global , 0 , &db_collection_class ,
-        // db_collection_constructor , 4 , 0 , 0 , 0 , 0 ) );
-        // XXXXXXassert( JS_InitClass( cx , global , 0 , &internal_cursor_class
-        // , internal_cursor_constructor , 0 , 0 , internal_cursor_functions , 0
-        // , 0 ) );
-        // ???assert( JS_InitClass( cx , global , 0 , &dbquery_class ,
-        // dbquery_constructor , 0 , 0 , 0 , 0 , 0 ) );
-        // assert( JS_InitClass( cx , global , 0 , &dbpointer_class ,
-        // dbpointer_constructor , 0 , 0 , dbpointer_functions , 0 , 0 ) );
-        // assert( JS_InitClass( cx , global , 0 , &bindata_class ,
-        // bindata_constructor , 0 , 0 , bindata_functions , 0 , 0 ) );
-        //
-        // ???assert( JS_InitClass( cx , global , 0 , &timestamp_class ,
-        // timestamp_constructor , 0 , 0 , 0 , 0 , 0 ) );
-        // assert( JS_InitClass( cx , global , 0 , &numberlong_class ,
-        // numberlong_constructor , 0 , 0 , numberlong_functions , 0 , 0 ) );
-        // assert( JS_InitClass( cx , global , 0 , &numberint_class ,
-        // numberint_constructor , 0 , 0 , numberint_functions , 0 , 0 ) );
-        // assert( JS_InitClass( cx , global , 0 , &minkey_class , 0 , 0 , 0 , 0
-        // , 0 , 0 ) );
-        // assert( JS_InitClass( cx , global , 0 , &maxkey_class , 0 , 0 , 0 , 0
-        // , 0 , 0 ) );
-        //
-        // ???assert( JS_InitClass( cx , global , 0 , &map_class ,
-        // map_constructor , 0 , 0 , map_functions , 0 , 0 ) );
-        //
-        // XXXXXXassert( JS_InitClass( cx , global , 0 , &bson_ro_class ,
-        // bson_cons , 0 , 0 , bson_functions , 0 , 0 ) );
-        // XXXXXXassert( JS_InitClass( cx , global , 0 , &bson_class , bson_cons
-        // , 0 , 0 , bson_functions , 0 , 0 ) );
-        //
-        // static const char *dbrefName = "DBRef";
-        // dbref_class.name = dbrefName;
-        // assert( JS_InitClass( cx , global , 0 , &dbref_class ,
-        // dbref_constructor , 2 , 0 , bson_functions , 0 , 0 ) );
-
+        
+        ScriptableObject.defineClass(this, DBRef.class, false, false);
     }
 
     protected void execCoreFiles(Context context) {

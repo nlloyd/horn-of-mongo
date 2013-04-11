@@ -21,57 +21,44 @@
  */
 package org.github.nlloyd.hornofmongo.adaptor;
 
-import org.mozilla.javascript.Context;
 import org.mozilla.javascript.annotations.JSConstructor;
-import org.mozilla.javascript.annotations.JSFunction;
 
 /**
  * @author nlloyd
  *
  */
-public class NumberLong extends ScriptableMongoObject {
-	
-	/**
-	 * 
-	 */
-	private static final long serialVersionUID = 7412902144340924262L;
-	private long realLong = 0;
+public class Timestamp extends ScriptableMongoObject {
 
-	/**
-	 * @see org.mozilla.javascript.ScriptableObject#getClassName()
-	 */
-	@Override
-	public String getClassName() {
-		return this.getClass().getSimpleName();
-	}
-	
-	@JSConstructor
-	public NumberLong() {
+    /**
+     * 
+     */
+    private static final long serialVersionUID = 4063412321929267268L;
+    
+    @JSConstructor
+    public Timestamp() {
         super();
-		put("floatApprox", this, realLong);
-	}
-	
-	@JSConstructor
-	public NumberLong(Object obj) {
+        put("t", this, Long.valueOf(0));
+        put("i", this, Long.valueOf(0));
+    }
+    
+    @JSConstructor
+    public Timestamp(Object t, Object i) {
         super();
-		String str = Context.toString(obj);
-		realLong = Long.valueOf(str);
-		put("floatApprox", this, realLong);
-	}
-	
-	@JSFunction
-	public long valueOf() {
-		return realLong;
-	}
-	
-	@JSFunction
-	public long toNumber() {
-		return realLong;
-	}
-	
-	@JSFunction
-	public String toString() {
-		return "NumberLong(" + realLong + ")";
-	}
+        long largestVal = ((2039-1970)*365*24*60*60);   // seconds between 1970=2038
+        if(Long.parseLong(t.toString()) > largestVal)
+            throw new IllegalArgumentException("The first argument must be in seconds;"
+                  + t.toString() + " is too large (max " + largestVal + ")");
+        put("t", this, t);
+        put("i", this, i);
+    }
+
+    /**
+     * @see org.mozilla.javascript.ScriptableObject#getClassName()
+     */
+    @Override
+    public String getClassName() {
+        // TODO Auto-generated method stub
+        return this.getClass().getSimpleName();
+    }
 
 }

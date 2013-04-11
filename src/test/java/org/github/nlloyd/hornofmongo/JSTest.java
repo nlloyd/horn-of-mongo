@@ -38,6 +38,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+import org.mozilla.javascript.Context;
 import org.mozilla.javascript.JavaScriptException;
 
 /**
@@ -56,15 +57,16 @@ public class JSTest {
      * startMongoProgramNoConnect() startParallelShell()
      */
     public static final List<String> excludedTests = Arrays
-            .asList(new String[] { "basicc.js", "connections_opened.js",
-                    "count8.js", "coveredIndex3.js", "currentop.js",
-                    "cursora.js", "distinct3.js", "drop2.js", "evalc.js",
-                    "evald.js", "explain3.js", "group7.js", "index12.js",
-                    "killop.js", "loadserverscripts.js", "mr_drop.js",
-                    "mr_killop.js", "orm.js", "orn.js", "queryoptimizer3.js",
-                    "queryoptimizer5.js", "remove9.js", "removeb.js",
-                    "removec.js", "shellkillop.js", "shellstartparallel.js",
-                    "shellspawn.js", "updatef.js" });
+            .asList(new String[] { "basicc.js", "bench_test1.js",
+                    "bench_test2.js", "bench_test3.js",
+                    "connections_opened.js", "count8.js", "coveredIndex3.js",
+                    "currentop.js", "cursora.js", "distinct3.js", "drop2.js",
+                    "evalc.js", "evald.js", "explain3.js", "group7.js",
+                    "index12.js", "killop.js", "loadserverscripts.js",
+                    "mr_drop.js", "mr_killop.js", "orm.js", "orn.js",
+                    "queryoptimizer3.js", "queryoptimizer5.js", "remove9.js",
+                    "removeb.js", "removec.js", "shellkillop.js",
+                    "shellstartparallel.js", "shellspawn.js", "updatef.js" });
 
     /**
      * Tests that throw an expected exception (whether by design or observed but
@@ -96,10 +98,11 @@ public class JSTest {
 
             @Override
             public boolean accept(File dir, String name) {
-                return !name.startsWith("_") && name.endsWith(".js")
-                        && !excludedTests.contains(name);
-//                 return name.startsWith("fsync2") && name.endsWith(".js")
-//                 && !excludedTests.contains(name);
+                 return !name.startsWith("_") && name.endsWith(".js")
+                         && (name.startsWith("auth1") || name.startsWith("autoid"))
+                         && !excludedTests.contains(name);
+//                return name.startsWith("auth1") && name.endsWith(".js")
+//                            && !excludedTests.contains(name);
             }
 
         });
@@ -114,7 +117,7 @@ public class JSTest {
     }
 
     private File jsTestFile = null;
-    
+
     private MongoScope testScope;
 
     public JSTest(String jsTestFileName, File jsTestFile) {
@@ -135,7 +138,7 @@ public class JSTest {
         testScope.setUseMongoShellWriteConcern(true);
         testScope.setMimicShellExceptionBehavior(true);
     }
-    
+
     @After
     public void cleanup() {
         testScope.cleanup();
@@ -143,6 +146,7 @@ public class JSTest {
 
     @Test
     public void test() throws Exception {
+        System.out.println("*** Running " + jsTestFile.getName());
         try {
             MongoRuntime.call(new MongoScriptAction(testScope, "connect",
                     "var db = connect('test',null,null);"));

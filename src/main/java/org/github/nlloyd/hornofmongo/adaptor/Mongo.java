@@ -20,7 +20,6 @@ import com.mongodb.DBCursor;
 import com.mongodb.DBObject;
 import com.mongodb.MongoException;
 import com.mongodb.WriteConcern;
-import com.mongodb.WriteResult;
 
 /**
  * JavaScript host Mongo object that acts as an adaptor between the JavaScript
@@ -121,6 +120,7 @@ public class Mongo extends ScriptableMongoObject {
                 handleMongoException(me);
             }
         } else {
+//            System.out.println("regularFind");
             DBCollection collection = db.getCollection(collectionName);
             DBCursor cursor = collection.find(bsonQuery, bsonFields).skip(skip)
                     .batchSize(batchSize).limit(limit).addOption(options);
@@ -220,10 +220,11 @@ public class Mongo extends ScriptableMongoObject {
         DBCollection collection = db
                 .getCollection(ns.substring(ns.indexOf('.') + 1));
 
+//        List<DBObject> toUpdate = null;
         try {
-            WriteResult result = collection.update(bsonQuery, bsonObj,
+//            toUpdate = collection.find(bsonQuery).toArray();
+            collection.update(bsonQuery, bsonObj,
                     upsertOp, multiOp);
-            // System.out.println(result);
         } catch (MongoException me) {
             handleMongoException(me);
         }
@@ -239,18 +240,17 @@ public class Mongo extends ScriptableMongoObject {
     public void auth(final Object authObj) {
         DBObject bsonAuth = (DBObject) BSONizer.convertJStoBSON(authObj);
         DB db = innerMongo.getDB(bsonAuth.get("userSource").toString());
-
         // hackety hack hack hack... we need a fresh, unauthenticated Mongo
         // instance
         // since the java driver does not support multiple calls to
         // db.authenticateCommand()
         if (db.isAuthenticated()) {
-            innerMongo.close();
+            mongoScope.closeConnection(innerMongo);
             try {
                 initMongo(host);
+                mongoScope.addOpenedConnection(innerMongo);
                 if (mongoScope.useMongoShellWriteConcern())
                     innerMongo.setWriteConcern(WriteConcern.UNACKNOWLEDGED);
-                mongoScope.addOpenedConnection(innerMongo);
             } catch (UnknownHostException e) {
                 // we should never get here
                 e.printStackTrace();

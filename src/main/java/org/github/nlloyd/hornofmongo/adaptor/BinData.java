@@ -45,6 +45,7 @@ public class BinData extends ScriptableMongoObject {
 	
 	@JSConstructor
 	public BinData(int type, Object obj) {
+        super();
 		if((type < 0) ||(type > 255)) {
 			throw new IllegalArgumentException(
 					"invalid BinData subtype -- range is 0..255 see bsonspec.org");

@@ -52,6 +52,7 @@ public class DB extends ScriptableMongoObject {
     protected String name;
 
     public DB() {
+        super();
     }
 
     @JSConstructor

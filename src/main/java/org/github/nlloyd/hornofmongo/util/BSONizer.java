@@ -122,7 +122,7 @@ public class BSONizer {
 			String options = Bytes.regexFlags(regex.flags());
 			jsObject = MongoRuntime.call(new NewInstanceAction(mongoScope, "RegExp", new Object[]{source, options}));
 		} else if(bsonObject instanceof org.bson.types.ObjectId) {
-			jsObject = MongoRuntime.call(new NewInstanceAction(mongoScope, "ObjectId", new Object[]{bsonObject}));
+			jsObject = MongoRuntime.call(new NewInstanceAction(mongoScope, "ObjectId", new Object[]{bsonObject.toString()}));
 		} else {
 			jsObject = bsonObject;
 		}

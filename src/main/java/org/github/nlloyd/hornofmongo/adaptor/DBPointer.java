@@ -21,57 +21,36 @@
  */
 package org.github.nlloyd.hornofmongo.adaptor;
 
-import org.mozilla.javascript.Context;
 import org.mozilla.javascript.annotations.JSConstructor;
-import org.mozilla.javascript.annotations.JSFunction;
 
 /**
  * @author nlloyd
  *
  */
-public class NumberLong extends ScriptableMongoObject {
-	
-	/**
-	 * 
-	 */
-	private static final long serialVersionUID = 7412902144340924262L;
-	private long realLong = 0;
+public class DBPointer extends ScriptableMongoObject {
 
-	/**
-	 * @see org.mozilla.javascript.ScriptableObject#getClassName()
-	 */
-	@Override
-	public String getClassName() {
-		return this.getClass().getSimpleName();
-	}
-	
-	@JSConstructor
-	public NumberLong() {
+    /**
+     * 
+     */
+    private static final long serialVersionUID = -9106146988587782504L;
+    
+    public DBPointer() {
         super();
-		put("floatApprox", this, realLong);
-	}
-	
-	@JSConstructor
-	public NumberLong(Object obj) {
+    }
+    
+    @JSConstructor
+    public DBPointer(Object namespace, Object objectId) {
         super();
-		String str = Context.toString(obj);
-		realLong = Long.valueOf(str);
-		put("floatApprox", this, realLong);
-	}
-	
-	@JSFunction
-	public long valueOf() {
-		return realLong;
-	}
-	
-	@JSFunction
-	public long toNumber() {
-		return realLong;
-	}
-	
-	@JSFunction
-	public String toString() {
-		return "NumberLong(" + realLong + ")";
-	}
+        put("ns", this, namespace);
+        put("id", this, objectId);
+    }
+
+    /**
+     * @see org.mozilla.javascript.ScriptableObject#getClassName()
+     */
+    @Override
+    public String getClassName() {
+        return this.getClass().getSimpleName();
+    }
 
 }

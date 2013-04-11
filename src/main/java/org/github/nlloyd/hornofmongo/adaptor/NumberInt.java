@@ -47,11 +47,13 @@ public class NumberInt extends ScriptableMongoObject {
 	
 	@JSConstructor
 	public NumberInt() {
+        super();
 		put("floatApprox", this, realInt);
 	}
 	
 	@JSConstructor
 	public NumberInt(Object obj) {
+        super();
 		String str = Context.toString(obj);
 		realInt = Integer.valueOf(str);
 		put("floatApprox", this, realInt);

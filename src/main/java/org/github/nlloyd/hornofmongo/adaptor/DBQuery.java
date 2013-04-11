@@ -14,12 +14,14 @@ public class DBQuery extends ScriptableMongoObject {
     private static final long serialVersionUID = -6198995485514617952L;
 
     public DBQuery() {
+        super();
     }
 
     @JSConstructor
     public DBQuery(Mongo mongo, DB db, Object collection, String ns,
             Object query, Object fields, Integer limit, Integer skip,
             Integer batchSize, Integer options) {
+        super();
         put("_mongo", this, mongo);
         put("_db", this, db);
         put("_collection", this, collection);

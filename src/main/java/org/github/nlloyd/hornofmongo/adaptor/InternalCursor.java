@@ -52,7 +52,9 @@ public class InternalCursor extends ScriptableMongoObject {
 	private Object fauxFindOneResult;
 	private boolean fauxFindOneReturned = false;
 
-	public InternalCursor() {}
+	public InternalCursor() {
+        super();
+    }
 
 	@JSConstructor
 	public InternalCursor(Object obj) {
