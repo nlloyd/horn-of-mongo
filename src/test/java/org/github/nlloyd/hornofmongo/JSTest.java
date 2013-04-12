@@ -38,8 +38,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
-import org.mozilla.javascript.Context;
 import org.mozilla.javascript.JavaScriptException;
+import org.mozilla.javascript.WrappedException;
 
 /**
  * @author nlloyd
@@ -79,6 +79,9 @@ public class JSTest {
     public static Map<String, String> expectedExceptionMessages = new Hashtable<String, String>();
 
     static {
+        expectedExceptionTypes.put("basicb.js", IllegalArgumentException.class);
+        expectedExceptionMessages.put("basicb.js",
+                "fields stored in the db can't start with '$' (Bad Key: '$a')");
         // document field order is changed although the contents are still
         // identical
         expectedExceptionTypes.put("update_arraymatch3.js",
@@ -98,9 +101,9 @@ public class JSTest {
 
             @Override
             public boolean accept(File dir, String name) {
-                 return !name.startsWith("_") && name.endsWith(".js")
-//                         && (name.startsWith("auth1") || name.startsWith("autoid"))
-                         && !excludedTests.contains(name);
+                return !name.startsWith("_") && name.endsWith(".js")
+//                        && (name.startsWith("compact2"))
+                        && !excludedTests.contains(name);
             }
 
         });
@@ -127,8 +130,8 @@ public class JSTest {
      */
     @Before
     public void setUp() throws Exception {
-//         System.setProperty("DEBUG.MONGO", Boolean.TRUE.toString());
-//         System.setProperty("DB.TRACE", Boolean.TRUE.toString());
+        // System.setProperty("DEBUG.MONGO", Boolean.TRUE.toString());
+        // System.setProperty("DB.TRACE", Boolean.TRUE.toString());
 
         testScope = MongoRuntime.createMongoScope();
         // set the exception handling behavior of the test runtime to mimic the
@@ -149,17 +152,24 @@ public class JSTest {
             MongoRuntime.call(new MongoScriptAction(testScope, "connect",
                     "var db = connect('test',null,null);"));
             MongoRuntime.call(new MongoScriptAction(testScope, jsTestFile));
+        } catch (WrappedException e) {
+            // a few tests throw expected exceptions, unwrap them if they are
+            // wrapped
+            verifyException((Exception) e.getWrappedException());
         } catch (Exception e) {
             // a few tests throw expected exceptions
-            if (expectedExceptionTests.contains(jsTestFile.getName())) {
-                assertEquals(expectedExceptionTypes.get(jsTestFile.getName()),
-                        e.getClass());
-                assertEquals(
-                        expectedExceptionMessages.get(jsTestFile.getName()),
-                        e.getMessage());
-            } else {
-                throw e;
-            }
+            verifyException(e);
+        }
+    }
+
+    private void verifyException(Exception e) throws Exception {
+        if (expectedExceptionTests.contains(jsTestFile.getName())) {
+            assertEquals(expectedExceptionTypes.get(jsTestFile.getName()),
+                    e.getClass());
+            assertEquals(expectedExceptionMessages.get(jsTestFile.getName()),
+                    e.getMessage());
+        } else {
+            throw e;
         }
     }
 

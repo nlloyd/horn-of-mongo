@@ -70,6 +70,9 @@ public class BSONizer {
             bsonObject = Pattern.compile(source.toString(), Bytes.regexFlags(options));;
         } else if(jsObject instanceof ObjectId) {
         	bsonObject = ((ObjectId)jsObject).getRealObjectId();
+//        } else if(jsObject.getClass().getSimpleName().equals("NativeDate")) {
+//            // NativeDate is a private class so we have to work around instanceof
+//            bsonObject = Context.jsToJava(jsObject, Date.class);
 		} else if(jsObject instanceof NativeObject) {
 			BasicDBObject bson = new BasicDBObject();
 			bsonObject = bson;

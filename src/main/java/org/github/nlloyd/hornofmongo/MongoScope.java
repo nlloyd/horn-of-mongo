@@ -22,14 +22,17 @@
 package org.github.nlloyd.hornofmongo;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.lang.reflect.InvocationTargetException;
 import java.util.HashSet;
+import java.util.Random;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
+import org.bson.io.BasicOutputBuffer;
 import org.github.nlloyd.hornofmongo.adaptor.BinData;
 import org.github.nlloyd.hornofmongo.adaptor.DB;
 import org.github.nlloyd.hornofmongo.adaptor.DBCollection;
@@ -42,6 +45,7 @@ import org.github.nlloyd.hornofmongo.adaptor.NumberInt;
 import org.github.nlloyd.hornofmongo.adaptor.NumberLong;
 import org.github.nlloyd.hornofmongo.adaptor.ObjectId;
 import org.github.nlloyd.hornofmongo.adaptor.Timestamp;
+import org.github.nlloyd.hornofmongo.util.BSONizer;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Function;
 import org.mozilla.javascript.JavaScriptException;
@@ -50,6 +54,9 @@ import org.mozilla.javascript.ScriptableObject;
 import org.mozilla.javascript.ast.Scope;
 import org.mozilla.javascript.tools.shell.Global;
 
+import com.mongodb.DBEncoder;
+import com.mongodb.DBObject;
+import com.mongodb.DefaultDBEncoder;
 import com.mongodb.MongoException;
 import com.mongodb.util.Util;
 
@@ -72,6 +79,12 @@ public class MongoScope extends Global {
     private static final long serialVersionUID = 4650743395507077775L;
 
     private static final Logger logger = Logger.getLogger(MongoScope.class);
+
+    private static ThreadLocal<Random> threadLocalRandomGen = new ThreadLocal<Random>() {
+        protected Random initialValue() {
+            return new Random();
+        }
+    };
 
     private static String[] mongoApiFiles = { "mongodb/assert.js",
             "mongodb/types.js", "mongodb/utils.js", "mongodb/utils_sh.js",
@@ -152,7 +165,7 @@ public class MongoScope extends Global {
         openedDriverConnections.remove(mongoConnection);
         mongoConnection.close();
     }
-    
+
     public void cleanup() {
         for (com.mongodb.Mongo connection : openedDriverConnections) {
             connection.close();
@@ -168,9 +181,13 @@ public class MongoScope extends Global {
 
         // context.setOptimizationLevel(-1);
 
-        String[] names = { "sleep", "hex_md5", "_isWindows" };
+        String[] names = { "sleep", "hex_md5", "_isWindows", "_srand", "_rand" };
         defineFunctionProperties(names, this.getClass(),
                 ScriptableObject.DONTENUM);
+        ScriptableObject objectPrototype = (ScriptableObject) ScriptableObject
+                .getClassPrototype(this, "Object");
+        objectPrototype.defineFunctionProperties(new String[] { "bsonsize" },
+                this.getClass(), ScriptableObject.DONTENUM);
 
         ScriptableObject.defineClass(this, Mongo.class, false, false);
         ScriptableObject.defineClass(this, ObjectId.class, false, false);
@@ -184,7 +201,7 @@ public class MongoScope extends Global {
         ScriptableObject.defineClass(this, Timestamp.class, false, false);
         ScriptableObject.defineClass(this, NumberLong.class, false, false);
         ScriptableObject.defineClass(this, NumberInt.class, false, false);
-        
+
         ScriptableObject.defineClass(this, DBRef.class, false, false);
     }
 
@@ -226,6 +243,7 @@ public class MongoScope extends Global {
                         // corresponding query field containing an array.
             case 10141: // Cannot apply $push/$pushAll modifier to non-array
             case 16734: // Unknown index plugin '*' in index { *: * }
+            case 10089: // can't remove from a capped collection
                 System.out.println(me.getMessage());
                 return;
             default:
@@ -235,10 +253,7 @@ public class MongoScope extends Global {
             throw me;
     }
 
-    /* --- global utility functions --- */
-    // scope.injectNative( "hex_md5" , native_hex_md5 );
-    // scope.injectNative( "version" , native_version );
-    // scope.injectNative( "sleep" , native_sleep );
+    /* --- global and globalish utility functions --- */
 
     // public static Object version(Context cx, Scriptable thisObj, Object[]
     // args,
@@ -261,6 +276,33 @@ public class MongoScope extends Global {
     public static Boolean _isWindows(Context cx, Scriptable thisObj,
             Object[] args, Function funObj) {
         return System.getProperty("os.name").startsWith("Windows");
+    }
+
+    public static void _srand(Context cx, Scriptable thisObj, Object[] args,
+            Function funObj) {
+        Random randomGen = threadLocalRandomGen.get();
+        if (args[0] instanceof Long)
+            randomGen.setSeed((Long) args[0]);
+        else
+            randomGen.setSeed(Double.valueOf(args[0].toString()).longValue());
+    }
+
+    public static Double _rand(Context cx, Scriptable thisObj, Object[] args,
+            Function funObj) {
+        return threadLocalRandomGen.get().nextDouble();
+    }
+
+    private static final DBEncoder bsonEncoder = DefaultDBEncoder.FACTORY
+            .create();
+
+    public static Long bsonsize(Context cx, Scriptable thisObj, Object[] args,
+            Function funObj) throws IOException {
+        DBObject bsonObj = (DBObject) BSONizer.convertJStoBSON(args[0]);
+        BasicOutputBuffer byteBuffer = new BasicOutputBuffer();
+        bsonEncoder.writeObject(byteBuffer, bsonObj);
+        ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
+        byteBuffer.pipe(byteStream);
+        return new Long(byteStream.size());
     }
 
 }

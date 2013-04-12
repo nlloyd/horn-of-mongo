@@ -1,6 +1,7 @@
 package org.github.nlloyd.hornofmongo.adaptor;
 
 import java.net.UnknownHostException;
+import java.util.List;
 
 import org.github.nlloyd.hornofmongo.MongoRuntime;
 import org.github.nlloyd.hornofmongo.MongoScope;
@@ -133,6 +134,7 @@ public class Mongo extends ScriptableMongoObject {
         return result;
     }
 
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     @JSFunction
     public void insert(final String ns, Object obj, int options) {
         Object rawObj = BSONizer.convertJStoBSON(obj);
@@ -170,7 +172,11 @@ public class Mongo extends ScriptableMongoObject {
                         .indexOf('.') + 1));
                 int oldOptions = collection.getOptions();
                 collection.setOptions(options);
-                collection.insert(bsonObj);
+                
+                if(rawObj instanceof List)
+                    collection.insert((List)rawObj);
+                else
+                    collection.insert(bsonObj);
                 collection.setOptions(oldOptions);
             }
         } catch (MongoException me) {
