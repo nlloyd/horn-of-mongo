@@ -22,56 +22,64 @@
 package org.github.nlloyd.hornofmongo.adaptor;
 
 import org.mozilla.javascript.Context;
+import org.mozilla.javascript.Undefined;
 import org.mozilla.javascript.annotations.JSConstructor;
 import org.mozilla.javascript.annotations.JSFunction;
 
 /**
  * @author nlloyd
- *
+ * 
  */
 public class NumberInt extends ScriptableMongoObject {
-	
-	/**
+
+    /**
 	 * 
 	 */
-	private static final long serialVersionUID = 7412902144340924262L;
-	private int realInt = 0;
+    private static final long serialVersionUID = 7412902144340924262L;
+    private int realInt = 0;
 
-	/**
-	 * @see org.mozilla.javascript.ScriptableObject#getClassName()
-	 */
-	@Override
-	public String getClassName() {
-		return this.getClass().getSimpleName();
-	}
-	
-	@JSConstructor
-	public NumberInt() {
+    /**
+     * @see org.mozilla.javascript.ScriptableObject#getClassName()
+     */
+    @Override
+    public String getClassName() {
+        return this.getClass().getSimpleName();
+    }
+
+    public NumberInt() {
         super();
-		put("floatApprox", this, realInt);
-	}
-	
-	@JSConstructor
-	public NumberInt(Object obj) {
+    }
+
+    @JSConstructor
+    public NumberInt(final Object obj) {
         super();
-		String str = Context.toString(obj);
-		realInt = Integer.valueOf(str);
-		put("floatApprox", this, realInt);
-	}
-	
-	@JSFunction
-	public long valueOf() {
-		return realInt;
-	}
-	
-	@JSFunction
-	public long toNumber() {
-		return realInt;
-	}
-	
-	@JSFunction
-	public String toString() {
-		return "NumberInt(" + realInt + ")";
-	}
+        if(obj instanceof Number) {
+            realInt = ((Number)obj).intValue();
+        } else if(!(obj instanceof Undefined)) {
+            String str = Context.toString(obj);
+            realInt = Integer.valueOf(str);
+        }
+        put("floatApprox", this, realInt);
+    }
+
+    @JSFunction
+    public long valueOf() {
+        return realInt;
+    }
+
+    @JSFunction
+    public long toNumber() {
+        return realInt;
+    }
+
+    @JSFunction
+    public String toString() {
+        return "NumberInt(" + realInt + ")";
+    }
+
+    public void setRealInt(Integer realInt) {
+        this.realInt = realInt;
+        put("floatApprox", this, realInt);
+    }
 
 }

@@ -33,7 +33,11 @@ import org.github.nlloyd.hornofmongo.MongoRuntime;
 import org.github.nlloyd.hornofmongo.MongoScope;
 import org.github.nlloyd.hornofmongo.action.MongoAction;
 import org.github.nlloyd.hornofmongo.action.NewInstanceAction;
+import org.github.nlloyd.hornofmongo.adaptor.NumberInt;
+import org.github.nlloyd.hornofmongo.adaptor.NumberLong;
 import org.github.nlloyd.hornofmongo.adaptor.ObjectId;
+import org.github.nlloyd.hornofmongo.adaptor.ScriptableMongoObject;
+import org.github.nlloyd.hornofmongo.adaptor.Timestamp;
 import org.mozilla.javascript.ConsString;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.NativeArray;
@@ -68,11 +72,6 @@ public class BSONizer {
             String options = fullRegex.substring(fullRegex.lastIndexOf("/") + 1);
             
             bsonObject = Pattern.compile(source.toString(), Bytes.regexFlags(options));;
-        } else if(jsObject instanceof ObjectId) {
-        	bsonObject = ((ObjectId)jsObject).getRealObjectId();
-//        } else if(jsObject.getClass().getSimpleName().equals("NativeDate")) {
-//            // NativeDate is a private class so we have to work around instanceof
-//            bsonObject = Context.jsToJava(jsObject, Date.class);
 		} else if(jsObject instanceof NativeObject) {
 			BasicDBObject bson = new BasicDBObject();
 			bsonObject = bson;
@@ -82,6 +81,26 @@ public class BSONizer {
 //				System.out.printf("obj has: %s -> %s\n", jsEntry.getKey(), jsEntry.getValue());
 				bson.put(jsEntry.getKey().toString(), convertJStoBSON(jsEntry.getValue()));
 			}
+		} else if(jsObject instanceof ScriptableMongoObject) {
+		    if(jsObject instanceof ObjectId) {
+	            bsonObject = ((ObjectId)jsObject).getRealObjectId();
+		    } else if(jsObject instanceof NumberInt) {
+		        bsonObject = ((NumberInt)jsObject).valueOf();
+		    } else if(jsObject instanceof NumberLong) {
+		        bsonObject = ((NumberLong)jsObject).valueOf();
+		    } else if(jsObject instanceof Timestamp) {
+		        // TODO ???
+		    }
+		} else if(jsObject instanceof ScriptableObject) {
+		    // we found a ScriptableObject that isn't any of the concrete ScriptableObjects above...
+		    String jsClassName = ((ScriptableObject)jsObject).getClassName();
+		    if("Date".equals(jsClassName)) {
+		        bsonObject = Context.jsToJava(jsObject, Date.class);
+		    } else {
+		        // TODO something better than this...
+		        System.err.println("bsonizer couldnt convert js class: " + jsClassName);
+		        bsonObject = jsObject;
+		    }
 		} else if(jsObject instanceof ConsString) {
 			bsonObject = jsObject.toString();
 		} else if(jsObject instanceof Undefined) {
@@ -127,6 +146,9 @@ public class BSONizer {
 		} else if(bsonObject instanceof org.bson.types.ObjectId) {
 			jsObject = MongoRuntime.call(new NewInstanceAction(mongoScope, "ObjectId"));
 			((ObjectId)jsObject).setRealObjectId((org.bson.types.ObjectId)bsonObject);
+        } else if(bsonObject instanceof Long) {
+            jsObject = MongoRuntime.call(new NewInstanceAction(mongoScope, "NumberLong"));
+            ((NumberLong)jsObject).setRealLong((Long)bsonObject);
 		} else {
 			jsObject = bsonObject;
 		}

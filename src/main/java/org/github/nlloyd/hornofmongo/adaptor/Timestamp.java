@@ -57,7 +57,6 @@ public class Timestamp extends ScriptableMongoObject {
      */
     @Override
     public String getClassName() {
-        // TODO Auto-generated method stub
         return this.getClass().getSimpleName();
     }
 

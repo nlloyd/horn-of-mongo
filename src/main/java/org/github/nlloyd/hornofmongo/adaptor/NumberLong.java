@@ -22,6 +22,7 @@
 package org.github.nlloyd.hornofmongo.adaptor;
 
 import org.mozilla.javascript.Context;
+import org.mozilla.javascript.Undefined;
 import org.mozilla.javascript.annotations.JSConstructor;
 import org.mozilla.javascript.annotations.JSFunction;
 
@@ -35,31 +36,34 @@ public class NumberLong extends ScriptableMongoObject {
 	 * 
 	 */
 	private static final long serialVersionUID = 7412902144340924262L;
-	private long realLong = 0;
-
-	/**
-	 * @see org.mozilla.javascript.ScriptableObject#getClassName()
-	 */
-	@Override
-	public String getClassName() {
-		return this.getClass().getSimpleName();
-	}
 	
-	@JSConstructor
+	private long realLong = 0;
+	
 	public NumberLong() {
         super();
-		put("floatApprox", this, realLong);
 	}
 	
 	@JSConstructor
-	public NumberLong(Object obj) {
+	public NumberLong(final Object obj) {
         super();
-		String str = Context.toString(obj);
-		realLong = Long.valueOf(str);
-		put("floatApprox", this, realLong);
+        if(obj instanceof Number) {
+            realLong = ((Number)obj).longValue();
+        } else if(!(obj instanceof Undefined)) {
+            String str = Context.toString(obj);
+            realLong = Long.valueOf(str);
+        }
+        put("floatApprox", this, realLong);
 	}
+
+    /**
+     * @see org.mozilla.javascript.ScriptableObject#getClassName()
+     */
+    @Override
+    public String getClassName() {
+        return this.getClass().getSimpleName();
+    }
 	
-	@JSFunction
+    @JSFunction
 	public long valueOf() {
 		return realLong;
 	}
@@ -70,8 +74,14 @@ public class NumberLong extends ScriptableMongoObject {
 	}
 	
 	@JSFunction
+	@Override
 	public String toString() {
 		return "NumberLong(" + realLong + ")";
 	}
+	
+    public void setRealLong(Long realLong) {
+        this.realLong = realLong;
+        put("floatApprox", this, realLong);
+    }
 
 }

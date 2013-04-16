@@ -31,7 +31,6 @@ import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
 
-import org.apache.log4j.Logger;
 import org.bson.io.BasicOutputBuffer;
 import org.github.nlloyd.hornofmongo.adaptor.BinData;
 import org.github.nlloyd.hornofmongo.adaptor.DB;
@@ -45,6 +44,7 @@ import org.github.nlloyd.hornofmongo.adaptor.NumberInt;
 import org.github.nlloyd.hornofmongo.adaptor.NumberLong;
 import org.github.nlloyd.hornofmongo.adaptor.ObjectId;
 import org.github.nlloyd.hornofmongo.adaptor.Timestamp;
+import org.github.nlloyd.hornofmongo.exception.MongoScopeException;
 import org.github.nlloyd.hornofmongo.util.BSONizer;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Function;
@@ -77,8 +77,6 @@ public class MongoScope extends Global {
 	 * 
 	 */
     private static final long serialVersionUID = 4650743395507077775L;
-
-    private static final Logger logger = Logger.getLogger(MongoScope.class);
 
     private static ThreadLocal<Random> threadLocalRandomGen = new ThreadLocal<Random>() {
         protected Random initialValue() {
@@ -211,11 +209,11 @@ public class MongoScope extends Global {
                 context.evaluateReader(this, loadFromClasspath(jsSetupFile),
                         jsSetupFile, 0, null);
             } catch (IOException e) {
-                logger.error(
+                throw new MongoScopeException(
                         "Caught IOException attempting to load from classpath: "
                                 + jsSetupFile, e);
             } catch (JavaScriptException e) {
-                logger.error(
+                throw new MongoScopeException(
                         "Caught JavaScriptException attempting to load from classpath: "
                                 + jsSetupFile, e);
             }
@@ -291,7 +289,7 @@ public class MongoScope extends Global {
             Function funObj) {
         return threadLocalRandomGen.get().nextDouble();
     }
-
+    
     private static final DBEncoder bsonEncoder = DefaultDBEncoder.FACTORY
             .create();
 

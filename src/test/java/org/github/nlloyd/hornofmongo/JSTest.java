@@ -102,7 +102,7 @@ public class JSTest {
             @Override
             public boolean accept(File dir, String name) {
                 return !name.startsWith("_") && name.endsWith(".js")
-//                        && (name.startsWith("compact2"))
+//                        && (name.startsWith("capped_max"))
                         && !excludedTests.contains(name);
             }
 
@@ -147,6 +147,31 @@ public class JSTest {
 
     @Test
     public void test() throws Exception {
+//        Mongo m = new MongoClient();
+//        long size = Long.valueOf(1024 * 16);
+//        BasicDBObject opts = new BasicDBObject();
+//        opts.put("capped", true);
+//        opts.put("size", size);
+//        DBCollection c = m.getDB("test").getCollection("tester");
+//        c.drop();
+////        DBCollection c = m.getDB("test").createCollection("tester", opts);
+//        BasicDBObject toInsert = new BasicDBObject();
+//        toInsert.put("an_int",Integer.valueOf(1234));
+//        toInsert.put("a_long", Long.valueOf(1024 * 16));
+//        toInsert.put("a_float",Float.valueOf(1234));
+//        toInsert.put("a_double", Double.valueOf(1024 * 16));
+//        c.drop();
+//        c.insert(toInsert);
+////        CommandResult stats = c.getStats();
+//        DBObject stats = c.findOne();
+//        for(String key : stats.keySet()) {
+//            System.out.printf("%s - %s\n", key, stats.get(key).getClass().getName());
+//        }
+
+//        Object l = MongoRuntime.call(new MongoScriptAction(testScope, "NumberLong('9223372036854775807');"));
+//        Object m = MongoRuntime.call(new MongoScriptAction(testScope, "Mongo();"));
+//        MongoRuntime.call(new MongoScriptAction(testScope, "printjson(NumberLong('9223372036854775807'));"));
+        
         System.out.println("*** Running " + jsTestFile.getName());
         try {
             MongoRuntime.call(new MongoScriptAction(testScope, "connect",
