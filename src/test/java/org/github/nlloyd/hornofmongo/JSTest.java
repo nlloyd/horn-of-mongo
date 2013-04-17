@@ -102,7 +102,7 @@ public class JSTest {
             @Override
             public boolean accept(File dir, String name) {
                 return !name.startsWith("_") && name.endsWith(".js")
-//                        && (name.startsWith("capped_max"))
+//                        && (name.startsWith("evalf"))
                         && !excludedTests.contains(name);
             }
 
@@ -175,7 +175,7 @@ public class JSTest {
         System.out.println("*** Running " + jsTestFile.getName());
         try {
             MongoRuntime.call(new MongoScriptAction(testScope, "connect",
-                    "var db = connect('test',null,null);"));
+                    "var db = connect('test',null,null); db.dropDatabase();"));
             MongoRuntime.call(new MongoScriptAction(testScope, jsTestFile));
         } catch (WrappedException e) {
             // a few tests throw expected exceptions, unwrap them if they are
