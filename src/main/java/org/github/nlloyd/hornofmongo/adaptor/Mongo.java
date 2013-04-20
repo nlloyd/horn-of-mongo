@@ -110,17 +110,17 @@ public class Mongo extends ScriptableMongoObject {
 
         com.mongodb.DB db = innerMongo.getDB(ns.substring(0, ns.indexOf('.')));
         String collectionName = ns.substring(ns.indexOf('.') + 1);
-//        if ("$cmd".equals(collectionName)) {
-//            try {
-//                CommandResult cmdResult = db.command(bsonQuery, options);
-//                handlePostCommandActions(db, bsonQuery);
-//                Object jsCmdResult = BSONizer.convertBSONtoJS(mongoScope, cmdResult);
-//                result = MongoRuntime.call(new NewInstanceAction(mongoScope,
-//                        "InternalCursor", new Object[] { jsCmdResult }));
-//            } catch (MongoException me) {
-//                handleMongoException(me);
-//            }
-//        } else {
+        if ("$cmd".equals(collectionName)) {
+            try {
+                CommandResult cmdResult = db.command(bsonQuery, options);
+                handlePostCommandActions(db, bsonQuery);
+                Object jsCmdResult = BSONizer.convertBSONtoJS(mongoScope, cmdResult);
+                result = MongoRuntime.call(new NewInstanceAction(mongoScope,
+                        "InternalCursor", new Object[] { jsCmdResult }));
+            } catch (MongoException me) {
+                handleMongoException(me);
+            }
+        } else {
 //            System.out.println("regularFind");
             DBCollection collection = db.getCollection(collectionName);
             DBCursor cursor = collection.find(bsonQuery, bsonFields).skip(skip)
@@ -129,7 +129,7 @@ public class Mongo extends ScriptableMongoObject {
                     .call(new NewInstanceAction(mongoScope, "InternalCursor",
                             new Object[] { cursor }));
             result = jsCursor;
-//        }
+        }
 
         return result;
     }
