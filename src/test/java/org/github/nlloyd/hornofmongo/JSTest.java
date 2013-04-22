@@ -106,7 +106,7 @@ public class JSTest {
             @Override
             public boolean accept(File dir, String name) {
                 return !name.startsWith("_") && name.endsWith(".js")
-//                        && (name.startsWith("evalf"))
+                        && (name.startsWith("countc"))
                         && !excludedTests.contains(name);
             }
 

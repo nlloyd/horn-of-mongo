@@ -60,7 +60,7 @@ public class Mongo extends ScriptableMongoObject {
         this.host = host;
         this.innerMongo = new com.mongodb.MongoClient(this.host);
     }
-    
+
     /**
      * Extracts the useMongoShellWriteConcern flag from the owning
      * {@link MongoScope} when the parent heirarchy is set.
@@ -114,14 +114,15 @@ public class Mongo extends ScriptableMongoObject {
             try {
                 CommandResult cmdResult = db.command(bsonQuery, options);
                 handlePostCommandActions(db, bsonQuery);
-                Object jsCmdResult = BSONizer.convertBSONtoJS(mongoScope, cmdResult);
+                Object jsCmdResult = BSONizer.convertBSONtoJS(mongoScope,
+                        cmdResult);
                 result = MongoRuntime.call(new NewInstanceAction(mongoScope,
                         "InternalCursor", new Object[] { jsCmdResult }));
             } catch (MongoException me) {
                 handleMongoException(me);
             }
         } else {
-//            System.out.println("regularFind");
+            // System.out.println("regularFind");
             DBCollection collection = db.getCollection(collectionName);
             DBCursor cursor = collection.find(bsonQuery, bsonFields).skip(skip)
                     .batchSize(batchSize).limit(limit).addOption(options);
@@ -151,19 +152,20 @@ public class Mongo extends ScriptableMongoObject {
             // into
             // index creation calls through the java driver
             if (ns.endsWith("system.indexes")) {
+//                 System.out.printf("ensureIndex(%s, %s)\n", ns, bsonObj);
                 com.mongodb.DB db = innerMongo.getDB(ns.substring(0,
                         ns.indexOf('.')));
                 String indexNS = bsonObj.get("ns").toString();
                 DBCollection collection = db.getCollection(indexNS.substring(ns
                         .indexOf('.') + 1));
                 DBObject keys = (DBObject) bsonObj.get("key");
+                bsonObj.removeField("_id");
+                bsonObj.removeField("ns");
+                bsonObj.removeField("key");
                 DBObject indexOpts = new BasicDBObject();
-                if (bsonObj.containsField("name"))
-                    indexOpts.put("name", bsonObj.get("name"));
-                if (bsonObj.containsField("unique"))
-                    indexOpts.put("unique", bsonObj.get("unique"));
-                if (bsonObj.containsField("dropDups"))
-                    indexOpts.put("dropDups", bsonObj.get("dropDups"));
+                for(String bsonKey : bsonObj.keySet()) {
+                    indexOpts.put(bsonKey, bsonObj.get(bsonKey));
+                }
                 collection.ensureIndex(keys, indexOpts);
             } else {
                 com.mongodb.DB db = innerMongo.getDB(ns.substring(0,
@@ -226,11 +228,10 @@ public class Mongo extends ScriptableMongoObject {
         DBCollection collection = db
                 .getCollection(ns.substring(ns.indexOf('.') + 1));
 
-//        List<DBObject> toUpdate = null;
+        // List<DBObject> toUpdate = null;
         try {
-//            toUpdate = collection.find(bsonQuery).toArray();
-            collection.update(bsonQuery, bsonObj,
-                    upsertOp, multiOp);
+            // toUpdate = collection.find(bsonQuery).toArray();
+            collection.update(bsonQuery, bsonObj, upsertOp, multiOp);
         } catch (MongoException me) {
             handleMongoException(me);
         }

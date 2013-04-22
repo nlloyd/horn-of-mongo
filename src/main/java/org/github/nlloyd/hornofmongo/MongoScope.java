@@ -39,6 +39,8 @@ import org.github.nlloyd.hornofmongo.adaptor.DBPointer;
 import org.github.nlloyd.hornofmongo.adaptor.DBQuery;
 import org.github.nlloyd.hornofmongo.adaptor.DBRef;
 import org.github.nlloyd.hornofmongo.adaptor.InternalCursor;
+import org.github.nlloyd.hornofmongo.adaptor.MaxKey;
+import org.github.nlloyd.hornofmongo.adaptor.MinKey;
 import org.github.nlloyd.hornofmongo.adaptor.Mongo;
 import org.github.nlloyd.hornofmongo.adaptor.NumberInt;
 import org.github.nlloyd.hornofmongo.adaptor.NumberLong;
@@ -199,6 +201,8 @@ public class MongoScope extends Global {
         ScriptableObject.defineClass(this, Timestamp.class, false, false);
         ScriptableObject.defineClass(this, NumberLong.class, false, false);
         ScriptableObject.defineClass(this, NumberInt.class, false, false);
+        ScriptableObject.defineClass(this, MinKey.class, false, false);
+        ScriptableObject.defineClass(this, MaxKey.class, false, false);
 
         ScriptableObject.defineClass(this, DBRef.class, false, false);
     }

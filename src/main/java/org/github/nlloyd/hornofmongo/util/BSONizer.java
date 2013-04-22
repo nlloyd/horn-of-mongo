@@ -34,6 +34,8 @@ import org.github.nlloyd.hornofmongo.MongoRuntime;
 import org.github.nlloyd.hornofmongo.MongoScope;
 import org.github.nlloyd.hornofmongo.action.MongoAction;
 import org.github.nlloyd.hornofmongo.action.NewInstanceAction;
+import org.github.nlloyd.hornofmongo.adaptor.MaxKey;
+import org.github.nlloyd.hornofmongo.adaptor.MinKey;
 import org.github.nlloyd.hornofmongo.adaptor.NumberInt;
 import org.github.nlloyd.hornofmongo.adaptor.NumberLong;
 import org.github.nlloyd.hornofmongo.adaptor.ObjectId;
@@ -94,6 +96,10 @@ public class BSONizer {
         } else if (jsObject instanceof ScriptableMongoObject) {
             if (jsObject instanceof ObjectId) {
                 bsonObject = ((ObjectId) jsObject).getRealObjectId();
+            } else if (jsObject instanceof MinKey) {
+                bsonObject = new org.bson.types.MinKey();
+            } else if (jsObject instanceof MaxKey) {
+                bsonObject = new org.bson.types.MaxKey();
             } else if (jsObject instanceof NumberInt) {
                 bsonObject = ((NumberInt) jsObject).valueOf();
             } else if (jsObject instanceof NumberLong) {
@@ -172,6 +178,12 @@ public class BSONizer {
                     "ObjectId"));
             ((ObjectId) jsObject)
                     .setRealObjectId((org.bson.types.ObjectId) bsonObject);
+        } else if (bsonObject instanceof org.bson.types.MinKey) {
+            jsObject = MongoRuntime.call(new NewInstanceAction(mongoScope,
+                    "MinKey"));
+        } else if (bsonObject instanceof org.bson.types.MaxKey) {
+            jsObject = MongoRuntime.call(new NewInstanceAction(mongoScope,
+                    "MaxKey"));
         } else if (bsonObject instanceof Long) {
             jsObject = MongoRuntime.call(new NewInstanceAction(mongoScope,
                     "NumberLong"));
