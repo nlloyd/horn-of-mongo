@@ -24,7 +24,6 @@ package org.github.nlloyd.hornofmongo.util;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.regex.Pattern;
 
 import org.bson.BSONObject;
@@ -50,6 +49,7 @@ import org.mozilla.javascript.ScriptRuntime;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
 import org.mozilla.javascript.Undefined;
+import org.mozilla.javascript.Wrapper;
 import org.mozilla.javascript.regexp.NativeRegExp;
 
 import com.mongodb.BasicDBObject;
@@ -87,11 +87,12 @@ public class BSONizer {
             bsonObject = bson;
 
             NativeObject rawJsObject = (NativeObject) jsObject;
-            for (Entry<Object, Object> jsEntry : rawJsObject.entrySet()) {
+            for (Object key : rawJsObject.keySet()) {
                 // System.out.printf("obj has: %s -> %s\n", jsEntry.getKey(),
                 // jsEntry.getValue());
-                bson.put(jsEntry.getKey().toString(),
-                        convertJStoBSON(jsEntry.getValue()));
+                Object value = extractJSProperty(rawJsObject, key);
+                bson.put(key.toString(),
+                        convertJStoBSON(value));
             }
         } else if (jsObject instanceof ScriptableMongoObject) {
             if (jsObject instanceof ObjectId) {
@@ -127,7 +128,7 @@ public class BSONizer {
         } else if (jsObject instanceof ConsString) {
             bsonObject = jsObject.toString();
         } else if (jsObject instanceof Undefined) {
-            bsonObject = null;
+            bsonObject = jsObject;
         } else {
             bsonObject = jsObject;
         }
@@ -195,6 +196,30 @@ public class BSONizer {
         }
 
         return jsObject;
+    }
+    
+    /**
+     * Ammended form of the {@link ScriptableObject#get(Object)} method that will return {@link Undefined}
+     * property values instead of null.
+     * 
+     * @param jsObject
+     * @param key
+     * @return
+     */
+    private static Object extractJSProperty(ScriptableObject jsObject, Object key) {
+        Object value = null;
+        if (key instanceof String) {
+            value = jsObject.get((String) key, jsObject);
+        } else if (key instanceof Number) {
+            value = jsObject.get(((Number) key).intValue(), jsObject);
+        }
+        if (value == Scriptable.NOT_FOUND) {
+            return null;
+        } else if (value instanceof Wrapper) {
+            return ((Wrapper) value).unwrap();
+        } else {
+            return value;
+        }
     }
 
     private static class JSPopulatePropertyAction extends MongoAction {
