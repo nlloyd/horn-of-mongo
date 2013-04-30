@@ -29,6 +29,7 @@ import org.mozilla.javascript.annotations.JSConstructor;
 import org.mozilla.javascript.annotations.JSFunction;
 
 import com.mongodb.DBCursor;
+import com.mongodb.DBObject;
 import com.mongodb.MongoException;
 
 /**
@@ -99,7 +100,8 @@ public class InternalCursor extends ScriptableMongoObject {
 			}
 		} else {
 			try {
-				next = BSONizer.convertBSONtoJS(mongoScope, cursor.next());
+			    DBObject bsonNext = cursor.next();
+				next = BSONizer.convertBSONtoJS(mongoScope, bsonNext);
 			} catch (MongoException me) {
 				handleMongoException(me);
 			}

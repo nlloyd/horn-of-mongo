@@ -34,13 +34,18 @@ public class DBRef extends ScriptableMongoObject {
      */
     private static final long serialVersionUID = 7845123364974187876L;
     
+    private String ns;
+    private Object id;
+    
     public DBRef() {
         super();
     }
     
     @JSConstructor
-    public DBRef(Object ref, Object id) {
+    public DBRef(String ref, Object id) {
         super();
+        this.ns = ref;
+        this.id = id;
         put("$ref", this, ref);
         put("$id", this, id);
     }
@@ -51,6 +56,36 @@ public class DBRef extends ScriptableMongoObject {
     @Override
     public String getClassName() {
         return this.getClass().getSimpleName();
+    }
+
+    /**
+     * @return the ns
+     */
+    public String getNs() {
+        return ns;
+    }
+
+    /**
+     * @param ns the ns to set
+     */
+    public void setNs(String ns) {
+        this.ns = ns;
+        put("$ref", this, ns);
+    }
+
+    /**
+     * @return the id
+     */
+    public Object getId() {
+        return id;
+    }
+
+    /**
+     * @param id the id to set
+     */
+    public void setId(Object id) {
+        this.id = id;
+        put("$id", this, id);
     }
 
 }

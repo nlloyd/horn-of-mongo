@@ -19,77 +19,56 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-package org.github.nlloyd.hornofmongo.adaptor;
-
-import org.mozilla.javascript.annotations.JSConstructor;
-import org.mozilla.javascript.annotations.JSGetter;
-import org.mozilla.javascript.annotations.JSSetter;
+package org.github.nlloyd.hornofmongo.exception;
 
 /**
  * @author nlloyd
  *
  */
-public class DBPointer extends ScriptableMongoObject {
+public class MongoScriptException extends Exception {
 
     /**
      * 
      */
-    private static final long serialVersionUID = -9106146988587782504L;
-    
-    private String ns;
-    private ObjectId id;
-    
-    public DBPointer() {
-        super();
-    }
-    
-    @JSConstructor
-    public DBPointer(String ns, ObjectId id) {
-        super();
-        this.ns = ns;
-        this.id = id;
-//        put("ns", this, ns);
-//        put("id", this, id);
+    private static final long serialVersionUID = -716251694461987533L;
+
+    /**
+     * 
+     */
+    public MongoScriptException() {
     }
 
     /**
-     * @see org.mozilla.javascript.ScriptableObject#getClassName()
+     * @param message
      */
-    @Override
-    public String getClassName() {
-        return this.getClass().getSimpleName();
+    public MongoScriptException(String message) {
+        super(message);
     }
 
     /**
-     * @return the ns
+     * @param cause
      */
-    @JSGetter
-    public String getNs() {
-        return ns;
+    public MongoScriptException(Throwable cause) {
+        super(cause);
     }
 
     /**
-     * @param ns the ns to set
+     * @param message
+     * @param cause
      */
-    @JSSetter
-    public void setNs(String ns) {
-        this.ns = ns;
+    public MongoScriptException(String message, Throwable cause) {
+        super(message, cause);
     }
 
     /**
-     * @return the id
+     * @param message
+     * @param cause
+     * @param enableSuppression
+     * @param writableStackTrace
      */
-    @JSGetter
-    public ObjectId getId() {
-        return id;
-    }
-
-    /**
-     * @param id the id to set
-     */
-    @JSSetter
-    public void setId(ObjectId id) {
-        this.id = id;
+    public MongoScriptException(String message, Throwable cause,
+            boolean enableSuppression, boolean writableStackTrace) {
+        super(message, cause, enableSuppression, writableStackTrace);
     }
 
 }

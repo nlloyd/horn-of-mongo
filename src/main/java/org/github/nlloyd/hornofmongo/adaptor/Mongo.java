@@ -158,7 +158,7 @@ public class Mongo extends ScriptableMongoObject {
             // into
             // index creation calls through the java driver
             if (ns.endsWith("system.indexes")) {
-                System.out.printf("ensureIndex(%s, %s)\n", ns, bsonObj);
+//                System.out.printf("ensureIndex(%s, %s)\n", ns, bsonObj);
                 com.mongodb.DB db = innerMongo.getDB(ns.substring(0,
                         ns.indexOf('.')));
                 String indexNS = bsonObj.get("ns").toString();

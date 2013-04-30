@@ -33,6 +33,8 @@ import org.github.nlloyd.hornofmongo.MongoRuntime;
 import org.github.nlloyd.hornofmongo.MongoScope;
 import org.github.nlloyd.hornofmongo.action.MongoAction;
 import org.github.nlloyd.hornofmongo.action.NewInstanceAction;
+import org.github.nlloyd.hornofmongo.adaptor.DBPointer;
+import org.github.nlloyd.hornofmongo.adaptor.DBRef;
 import org.github.nlloyd.hornofmongo.adaptor.MaxKey;
 import org.github.nlloyd.hornofmongo.adaptor.MinKey;
 import org.github.nlloyd.hornofmongo.adaptor.NumberInt;
@@ -61,6 +63,7 @@ import com.mongodb.Bytes;
  */
 public class BSONizer {
 
+    @SuppressWarnings("deprecation")
     public static Object convertJStoBSON(Object jsObject) {
         Object bsonObject = null;
         if (jsObject instanceof NativeArray) {
@@ -91,8 +94,7 @@ public class BSONizer {
                 // System.out.printf("obj has: %s -> %s\n", jsEntry.getKey(),
                 // jsEntry.getValue());
                 Object value = extractJSProperty(rawJsObject, key);
-                bson.put(key.toString(),
-                        convertJStoBSON(value));
+                bson.put(key.toString(), convertJStoBSON(value));
             }
         } else if (jsObject instanceof ScriptableMongoObject) {
             if (jsObject instanceof ObjectId) {
@@ -105,6 +107,14 @@ public class BSONizer {
                 bsonObject = ((NumberInt) jsObject).valueOf();
             } else if (jsObject instanceof NumberLong) {
                 bsonObject = ((NumberLong) jsObject).valueOf();
+            } else if (jsObject instanceof DBRef) {
+                DBRef jsRef = (DBRef) jsObject;
+                Object id = convertJStoBSON(jsRef.getId());
+                bsonObject = new com.mongodb.DBRef(null, jsRef.getNs(), id);
+            } else if (jsObject instanceof DBPointer) {
+                DBPointer jsPointer = (DBPointer) jsObject;
+                bsonObject = new com.mongodb.DBPointer(jsPointer.getNs(),
+                        jsPointer.getId().getRealObjectId());
             } else if (jsObject instanceof Timestamp) {
                 // TODO ???
             }
@@ -136,6 +146,7 @@ public class BSONizer {
         return bsonObject;
     }
 
+    @SuppressWarnings("deprecation")
     public static Object convertBSONtoJS(MongoScope mongoScope,
             Object bsonObject) {
         Object jsObject = null;
@@ -185,28 +196,41 @@ public class BSONizer {
         } else if (bsonObject instanceof org.bson.types.MaxKey) {
             jsObject = MongoRuntime.call(new NewInstanceAction(mongoScope,
                     "MaxKey"));
+        } else if (bsonObject instanceof com.mongodb.DBRef) {
+            com.mongodb.DBRef dbRef = (com.mongodb.DBRef) bsonObject;
+            Object id = convertBSONtoJS(mongoScope, dbRef.getId());
+            jsObject = MongoRuntime.call(new NewInstanceAction(mongoScope,
+                    "DBRef", new Object[] { dbRef.getRef(), id }));
+        } else if (bsonObject instanceof com.mongodb.DBPointer) {
+            com.mongodb.DBPointer dbPointer = (com.mongodb.DBPointer) bsonObject;
+            ObjectId oid = (ObjectId) MongoRuntime.call(new NewInstanceAction(
+                    mongoScope, "ObjectId"));
+            oid.setRealObjectId(dbPointer.getId());
+            jsObject = MongoRuntime.call(new NewInstanceAction(mongoScope,
+                    "DBPointer", new Object[] { dbPointer.getRef(), oid }));
         } else if (bsonObject instanceof Long) {
             jsObject = MongoRuntime.call(new NewInstanceAction(mongoScope,
                     "NumberLong"));
             ((NumberLong) jsObject).setRealLong((Long) bsonObject);
         } else if (bsonObject instanceof Code) {
-            jsObject = ((Code)bsonObject).getCode();
+            jsObject = ((Code) bsonObject).getCode();
         } else {
             jsObject = bsonObject;
         }
 
         return jsObject;
     }
-    
+
     /**
-     * Ammended form of the {@link ScriptableObject#get(Object)} method that will return {@link Undefined}
-     * property values instead of null.
+     * Ammended form of the {@link ScriptableObject#get(Object)} method that
+     * will return {@link Undefined} property values instead of null.
      * 
      * @param jsObject
      * @param key
      * @return
      */
-    private static Object extractJSProperty(ScriptableObject jsObject, Object key) {
+    private static Object extractJSProperty(ScriptableObject jsObject,
+            Object key) {
         Object value = null;
         if (key instanceof String) {
             value = jsObject.get((String) key, jsObject);

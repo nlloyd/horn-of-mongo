@@ -26,6 +26,7 @@ import static org.github.nlloyd.hornofmongo.adaptor.DBCollection.isSpecialName;
 import org.apache.commons.lang3.StringUtils;
 import org.github.nlloyd.hornofmongo.MongoRuntime;
 import org.github.nlloyd.hornofmongo.action.NewInstanceAction;
+import org.github.nlloyd.hornofmongo.exception.MongoScriptException;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
@@ -58,6 +59,7 @@ public class DB extends ScriptableMongoObject {
     @JSConstructor
     public DB(Mongo mongo, String name) {
         super();
+        validateDbName(name);
         this.mongo = mongo;
         this.name = name;
         if (StringUtils.isBlank(name))
@@ -87,8 +89,8 @@ public class DB extends ScriptableMongoObject {
         if ((property == ScriptableObject.NOT_FOUND) && this.equals(start)
                 && !isSpecialName(name)
                 && !ScriptableObject.hasProperty(this, name)) {
-            property = MongoRuntime.call(new NewInstanceAction(
-                    mongoScope, "DBCollection", new Object[] { mongo, this,
+            property = MongoRuntime.call(new NewInstanceAction(mongoScope,
+                    "DBCollection", new Object[] { mongo, this,
                             Context.toString(name),
                             Context.toString(this.name + "." + name) }));
             this.put(name, this, property);
@@ -96,4 +98,9 @@ public class DB extends ScriptableMongoObject {
         return property;
     }
 
+    private void validateDbName(String name) {
+        if (StringUtils.containsAny(name, "/\\. \""))
+            throw Context.throwAsScriptRuntimeEx(new MongoScriptException("["
+                    + name + "] is not a valid database name"));
+    }
 }
