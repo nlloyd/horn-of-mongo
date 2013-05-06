@@ -112,9 +112,9 @@
                 <version>2.14.1</version>
                 <configuration>
                     <workingDirectory>${project.build.directory}/test-classes</workingDirectory>
-                    <parallel>methods</parallel>
-                    <perCoreThreadCount>false</perCoreThreadCount>
-                    <threadCount>20</threadCount>
+<!--                     <parallel>methods</parallel> -->
+<!--                     <perCoreThreadCount>false</perCoreThreadCount> -->
+<!--                     <threadCount>20</threadCount> -->
                 </configuration>
             </plugin>
         </plugins>

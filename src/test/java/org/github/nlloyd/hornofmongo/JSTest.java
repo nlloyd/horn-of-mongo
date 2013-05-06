@@ -57,7 +57,11 @@ public class JSTest {
      * 
      * evalf.js is excluded due to a locking issue that has yet to be resolved
      * however the complexity of the test scenario makes this a safe-to-exclude
-     * for now
+     * for now.
+     * 
+     * memory.js is excluded because it is testing the mongod rather than the
+     * client api behavior (and it takes a while to run on slower machines).  
+     * This test does actually pass, however.
      */
     public static final List<String> excludedTests = Arrays
             .asList(new String[] { "basicc.js", "bench_test1.js",
@@ -66,7 +70,7 @@ public class JSTest {
                     "currentop.js", "cursora.js", "distinct3.js", "drop2.js",
                     "evalc.js", "evalf.js", "evald.js", "explain3.js",
                     "group7.js", "index12.js", "killop.js",
-                    "loadserverscripts.js", "mr_drop.js", "mr_killop.js",
+                    "loadserverscripts.js", "memory.js", "mr_drop.js", "mr_killop.js",
                     "orm.js", "orn.js", "queryoptimizer3.js",
                     "queryoptimizer5.js", "remove9.js", "removeb.js",
                     "removec.js", "shellkillop.js", "shellstartparallel.js",
@@ -99,14 +103,15 @@ public class JSTest {
     public static Iterable<Object[]> getJsTestScripts() {
         if (cwd == null)
             cwd = new File(System.getProperty("user.dir"),
-                    "target/test-classes/jstests");
+                    "jstests");
 
+        System.out.println("searching for *.js test files in path: " + cwd.toString());
         File[] jsFiles = cwd.listFiles(new FilenameFilter() {
 
             @Override
             public boolean accept(File dir, String name) {
                 return !name.startsWith("_") && name.endsWith(".js")
-                        && (name.startsWith("dbref"))
+//                        && (name.startsWith("dbref"))
                         && !excludedTests.contains(name);
             }
 
