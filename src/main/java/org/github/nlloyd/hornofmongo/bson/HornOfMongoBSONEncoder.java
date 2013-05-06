@@ -21,6 +21,8 @@
  */
 package org.github.nlloyd.hornofmongo.bson;
 
+import org.mozilla.javascript.Undefined;
+
 import com.mongodb.DBEncoder;
 import com.mongodb.DBEncoderFactory;
 import com.mongodb.DefaultDBEncoder;
@@ -44,7 +46,8 @@ public class HornOfMongoBSONEncoder extends DefaultDBEncoder {
             super._putObjectField(name, val);
         } catch (IllegalArgumentException e) {
             if (e.getMessage().startsWith("can't serialize ")) {
-                System.err.println(e.getMessage() + ", encoding as Undefined");
+                if(!(val instanceof Undefined))
+                    System.err.println(e.getMessage() + ", encoding as Undefined");
                 putUndefined(name);
             }
         }

@@ -21,6 +21,8 @@
  */
 package org.github.nlloyd.hornofmongo;
 
+import static java.util.Collections.synchronizedSet;
+
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -32,6 +34,7 @@ import java.util.Random;
 import java.util.Set;
 
 import org.bson.io.BasicOutputBuffer;
+import org.github.nlloyd.hornofmongo.action.MongoAction;
 import org.github.nlloyd.hornofmongo.adaptor.BinData;
 import org.github.nlloyd.hornofmongo.adaptor.DB;
 import org.github.nlloyd.hornofmongo.adaptor.DBCollection;
@@ -113,7 +116,8 @@ public class MongoScope extends Global {
      */
     private boolean useMongoShellWriteConcern = false;
 
-    private Set<com.mongodb.Mongo> openedDriverConnections = new HashSet<com.mongodb.Mongo>();
+    private Set<Mongo> mongoConnections = synchronizedSet(new HashSet<Mongo>());
+    private boolean hasMongoPrototype = false;
 
     public MongoScope() {
         super();
@@ -156,21 +160,38 @@ public class MongoScope extends Global {
     public void setUseMongoShellWriteConcern(boolean useMongoShellWriteConcern) {
         this.useMongoShellWriteConcern = useMongoShellWriteConcern;
     }
-
-    public void addOpenedConnection(com.mongodb.Mongo mongoConnection) {
-        openedDriverConnections.add(mongoConnection);
+    
+    /**
+     * @return the hasMongoPrototype
+     */
+    public boolean hasMongoPrototype() {
+        return hasMongoPrototype;
     }
 
-    public void closeConnection(com.mongodb.Mongo mongoConnection) {
-        openedDriverConnections.remove(mongoConnection);
-        mongoConnection.close();
+    /**
+     * @param hasMongoPrototype the hasMongoPrototype to set
+     */
+    public void setHasMongoPrototype(boolean hasMongoPrototype) {
+        this.hasMongoPrototype = hasMongoPrototype;
+    }
+
+    public void addMongoConnection(Mongo mongoConnection) {
+        mongoConnections.add(mongoConnection);
+    }
+
+    public int countMongoConnections() {
+        return mongoConnections.size();
+    }
+
+    public void removeMongoConnection(Mongo mongoConnection) {
+        mongoConnections.remove(mongoConnection);
     }
 
     public void cleanup() {
-        for (com.mongodb.Mongo connection : openedDriverConnections) {
+        for (Mongo connection : mongoConnections) {
             connection.close();
         }
-        openedDriverConnections.clear();
+        mongoConnections.clear();
     }
 
     protected void initMongoJS(Context context) throws IllegalAccessException,
@@ -211,7 +232,7 @@ public class MongoScope extends Global {
         for (String jsSetupFile : mongoApiFiles) {
             try {
                 context.evaluateReader(this, loadFromClasspath(jsSetupFile),
-                        jsSetupFile, 0, null);
+                        jsSetupFile, 1, null);
             } catch (IOException e) {
                 throw new MongoScopeException(
                         "Caught IOException attempting to load from classpath: "
@@ -293,7 +314,7 @@ public class MongoScope extends Global {
             Function funObj) {
         return threadLocalRandomGen.get().nextDouble();
     }
-    
+
     private static final DBEncoder bsonEncoder = DefaultDBEncoder.FACTORY
             .create();
 
@@ -307,4 +328,27 @@ public class MongoScope extends Global {
         return new Long(byteStream.size());
     }
 
+    public static final class InitMongoScopeAction extends MongoAction {
+
+        public InitMongoScopeAction() {
+            super(null);
+        }
+
+        @Override
+        public Object run(Context cx) {
+            try {
+                return new MongoScope(cx);
+            } catch (IllegalAccessException e) {
+                throw new MongoScopeException(
+                        "caught when attempting to create a new MongoScope", e);
+            } catch (InstantiationException e) {
+                throw new MongoScopeException(
+                        "caught when attempting to create a new MongoScope", e);
+            } catch (InvocationTargetException e) {
+                throw new MongoScopeException(
+                        "caught when attempting to create a new MongoScope", e);
+            }
+        }
+
+    }
 }

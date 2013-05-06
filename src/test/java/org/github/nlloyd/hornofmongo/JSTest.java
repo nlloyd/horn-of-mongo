@@ -32,8 +32,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.github.nlloyd.hornofmongo.action.MongoScriptAction;
-import org.junit.After;
-import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -65,12 +64,13 @@ public class JSTest {
                     "bench_test2.js", "bench_test3.js",
                     "connections_opened.js", "count8.js", "coveredIndex3.js",
                     "currentop.js", "cursora.js", "distinct3.js", "drop2.js",
-                    "evalc.js", "evalf.js", "evald.js", "explain3.js", "group7.js",
-                    "index12.js", "killop.js", "loadserverscripts.js",
-                    "mr_drop.js", "mr_killop.js", "orm.js", "orn.js",
-                    "queryoptimizer3.js", "queryoptimizer5.js", "remove9.js",
-                    "removeb.js", "removec.js", "shellkillop.js",
-                    "shellstartparallel.js", "shellspawn.js", "updatef.js" });
+                    "evalc.js", "evalf.js", "evald.js", "explain3.js",
+                    "group7.js", "index12.js", "killop.js",
+                    "loadserverscripts.js", "mr_drop.js", "mr_killop.js",
+                    "orm.js", "orn.js", "queryoptimizer3.js",
+                    "queryoptimizer5.js", "remove9.js", "removeb.js",
+                    "removec.js", "shellkillop.js", "shellstartparallel.js",
+                    "shellspawn.js", "updatef.js" });
 
     /**
      * Tests that throw an expected exception (whether by design or observed but
@@ -99,14 +99,14 @@ public class JSTest {
     public static Iterable<Object[]> getJsTestScripts() {
         if (cwd == null)
             cwd = new File(System.getProperty("user.dir"),
-                    "target/test-classes");
+                    "target/test-classes/jstests");
 
         File[] jsFiles = cwd.listFiles(new FilenameFilter() {
 
             @Override
             public boolean accept(File dir, String name) {
                 return !name.startsWith("_") && name.endsWith(".js")
-                        && (name.startsWith("countc"))
+                        && (name.startsWith("dbref"))
                         && !excludedTests.contains(name);
             }
 
@@ -123,63 +123,72 @@ public class JSTest {
 
     private File jsTestFile = null;
 
-    private MongoScope testScope;
+     private static MongoScope testScope;
 
     public JSTest(String jsTestFileName, File jsTestFile) {
         this.jsTestFile = jsTestFile;
     }
 
-    /**
-     * @throws java.lang.Exception
-     */
-    @Before
-    public void setUp() throws Exception {
-        // System.setProperty("DEBUG.MONGO", Boolean.TRUE.toString());
-        // System.setProperty("DB.TRACE", Boolean.TRUE.toString());
-
+    @BeforeClass
+    public static void setUpClass() throws Exception {
         testScope = MongoRuntime.createMongoScope();
         // set the exception handling behavior of the test runtime to mimic the
         // official mongo shell client
         testScope.setUseMongoShellWriteConcern(true);
         testScope.setMimicShellExceptionBehavior(true);
+//        MongoRuntime.call(new MongoAction(null) {
+//
+//            @Override
+//            public Object run(Context cx) {
+//                return null;
+//            }
+//
+//        });
+//
+//        String debugConfig = "transport=socket,suspend=y,address=9000";
+//        System.out.println("LISTENING: " + debugConfig);
+//        RhinoDebugger debugger = new RhinoDebugger(debugConfig);
+//        debugger.start();
+//        ContextFactory.getGlobal().addListener(debugger);
     }
 
-    @After
-    public void cleanup() {
-        testScope.cleanup();
-    }
+    /**
+     * @throws java.lang.Exception
+     */
+    // @Before
+    // public void setUp() throws Exception {
+    // // System.setProperty("DEBUG.MONGO", Boolean.TRUE.toString());
+    // // System.setProperty("DB.TRACE", Boolean.TRUE.toString());
+    //
+    // testScope = MongoRuntime.createMongoScope();
+    // // set the exception handling behavior of the test runtime to mimic the
+    // // official mongo shell client
+    // testScope.setUseMongoShellWriteConcern(true);
+    // testScope.setMimicShellExceptionBehavior(true);
+    // }
+    //
+    // @After
+    // public void cleanup() {
+    // testScope.cleanup();
+    // if (Context.getCurrentContext() != null) {
+    // System.out.println("Context associated with thread, cleaning up");
+    // Context.exit();
+    // }
+    // testScope = null;
+    // // System.gc();
+    // }
 
     @Test
     public void test() throws Exception {
-//        Mongo m = new MongoClient();
-//        long size = Long.valueOf(1024 * 16);
-//        BasicDBObject opts = new BasicDBObject();
-//        opts.put("capped", true);
-//        opts.put("size", size);
-//        DBCollection c = m.getDB("test").getCollection("tester");
-//        c.drop();
-////        DBCollection c = m.getDB("test").createCollection("tester", opts);
-//        BasicDBObject toInsert = new BasicDBObject();
-//        toInsert.put("an_int",Integer.valueOf(1234));
-//        toInsert.put("a_long", Long.valueOf(1024 * 16));
-//        toInsert.put("a_float",Float.valueOf(1234));
-//        toInsert.put("a_double", Double.valueOf(1024 * 16));
-//        c.drop();
-//        c.insert(toInsert);
-////        CommandResult stats = c.getStats();
-//        DBObject stats = c.findOne();
-//        for(String key : stats.keySet()) {
-//            System.out.printf("%s - %s\n", key, stats.get(key).getClass().getName());
-//        }
+        // System.setProperty("DEBUG.MONGO", Boolean.TRUE.toString());
+        // System.setProperty("DB.TRACE", Boolean.TRUE.toString());
 
-//        Object l = MongoRuntime.call(new MongoScriptAction(testScope, "NumberLong('9223372036854775807');"));
-//        Object m = MongoRuntime.call(new MongoScriptAction(testScope, "Mongo();"));
-//        MongoRuntime.call(new MongoScriptAction(testScope, "printjson(NumberLong('9223372036854775807'));"));
-        
+        System.out.println("--- on thread: " + Thread.currentThread().getId());
+
         System.out.println("*** Running " + jsTestFile.getName());
         try {
             MongoRuntime.call(new MongoScriptAction(testScope, "connect",
-                    "var db = connect('test',null,null);"));
+                    "db = connect('test',null,null);"));
             MongoRuntime.call(new MongoScriptAction(testScope, jsTestFile));
         } catch (WrappedException e) {
             // a few tests throw expected exceptions, unwrap them if they are
@@ -189,6 +198,14 @@ public class JSTest {
             // a few tests throw expected exceptions
             verifyException(e);
         }
+
+//        System.out.println("*** Cleaning up");
+        testScope.cleanup();
+//        if (Context.getCurrentContext() != null) {
+//            System.out.println("Context associated with thread, cleaning up");
+//            Context.exit();
+//        }
+//        testScope = null;
     }
 
     private void verifyException(Exception e) throws Exception {

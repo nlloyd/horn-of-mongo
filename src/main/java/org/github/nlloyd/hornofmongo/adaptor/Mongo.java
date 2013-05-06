@@ -9,6 +9,7 @@ import org.github.nlloyd.hornofmongo.MongoRuntime;
 import org.github.nlloyd.hornofmongo.MongoScope;
 import org.github.nlloyd.hornofmongo.action.NewInstanceAction;
 import org.github.nlloyd.hornofmongo.util.BSONizer;
+import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
 import org.mozilla.javascript.Undefined;
@@ -42,28 +43,33 @@ public class Mongo extends ScriptableMongoObject {
     protected com.mongodb.Mongo innerMongo;
 
     protected String host;
-
+    
     @JSConstructor
     public Mongo() throws UnknownHostException {
         super();
-        initMongo("localhost");
-
+        this.host = "localhost";
     }
 
     @JSConstructor
     public Mongo(final Object host) throws UnknownHostException {
         super();
         if (host instanceof Undefined)
-            initMongo("localhost");
+            this.host = "localhost";
         else
-            initMongo(host.toString());
+            this.host = host.toString();
     }
 
-    private void initMongo(String host) throws UnknownHostException {
-        this.host = host;
+    private void initMongoConnection() throws UnknownHostException {
         MongoClientOptions clientOptions = MongoClientOptions.builder()
                 .dbEncoderFactory(FACTORY).build();
         this.innerMongo = new com.mongodb.MongoClient(this.host, clientOptions);
+        if (mongoScope.useMongoShellWriteConcern())
+            innerMongo.setWriteConcern(WriteConcern.UNACKNOWLEDGED);
+    }
+
+    public void close() {
+        if(innerMongo != null)
+            innerMongo.close();
     }
 
     /**
@@ -75,9 +81,21 @@ public class Mongo extends ScriptableMongoObject {
     @Override
     public void setParentScope(Scriptable m) {
         super.setParentScope(m);
-        if (mongoScope.useMongoShellWriteConcern())
-            innerMongo.setWriteConcern(WriteConcern.UNACKNOWLEDGED);
-        mongoScope.addOpenedConnection(innerMongo);
+        // don't create a client connection for the prototype
+        if (mongoScope.hasMongoPrototype()) {
+            try {
+                initMongoConnection();
+                mongoScope.addMongoConnection(this);
+            } catch (UnknownHostException e) {
+                Context.throwAsScriptRuntimeEx(e);
+            }
+        } else {
+            mongoScope.setHasMongoPrototype(true);
+        }
+    }
+
+    public com.mongodb.Mongo getInnerMongo() {
+        return innerMongo;
     }
 
     /**
@@ -86,10 +104,6 @@ public class Mongo extends ScriptableMongoObject {
     @Override
     public String getClassName() {
         return this.getClass().getSimpleName();
-    }
-
-    public com.mongodb.Mongo getJavaClient() {
-        return innerMongo;
     }
 
     // --- Mongo JavaScript function implementation ---
@@ -117,7 +131,8 @@ public class Mongo extends ScriptableMongoObject {
         String collectionName = ns.substring(ns.indexOf('.') + 1);
         if ("$cmd".equals(collectionName)) {
             try {
-                CommandResult cmdResult = db.command(bsonQuery, options, FACTORY.create());
+                CommandResult cmdResult = db.command(bsonQuery, options,
+                        FACTORY.create());
                 handlePostCommandActions(db, bsonQuery);
                 Object jsCmdResult = BSONizer.convertBSONtoJS(mongoScope,
                         cmdResult);
@@ -158,7 +173,7 @@ public class Mongo extends ScriptableMongoObject {
             // into
             // index creation calls through the java driver
             if (ns.endsWith("system.indexes")) {
-//                System.out.printf("ensureIndex(%s, %s)\n", ns, bsonObj);
+                // System.out.printf("ensureIndex(%s, %s)\n", ns, bsonObj);
                 com.mongodb.DB db = innerMongo.getDB(ns.substring(0,
                         ns.indexOf('.')));
                 String indexNS = bsonObj.get("ns").toString();
@@ -260,12 +275,9 @@ public class Mongo extends ScriptableMongoObject {
         // since the java driver does not support multiple calls to
         // db.authenticateCommand()
         if (db.isAuthenticated()) {
-            mongoScope.closeConnection(innerMongo);
+            close();
             try {
-                initMongo(host);
-                mongoScope.addOpenedConnection(innerMongo);
-                if (mongoScope.useMongoShellWriteConcern())
-                    innerMongo.setWriteConcern(WriteConcern.UNACKNOWLEDGED);
+                initMongoConnection();
             } catch (UnknownHostException e) {
                 // we should never get here
                 e.printStackTrace();

@@ -21,11 +21,7 @@
  */
 package org.github.nlloyd.hornofmongo;
 
-import java.lang.reflect.InvocationTargetException;
-
 import org.github.nlloyd.hornofmongo.action.MongoAction;
-import org.github.nlloyd.hornofmongo.exception.MongoScopeException;
-import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ContextFactory;
 
 /**
@@ -47,35 +43,13 @@ public class MongoRuntime {
      * @return
      */
     public static final MongoScope createMongoScope() {
-        MongoScope mongoScope = (MongoScope) call(new MongoAction(null) {
-
-            @Override
-            public Object run(Context cx) {
-                try {
-                    return new MongoScope(cx);
-                } catch (IllegalAccessException e) {
-                    throw new MongoScopeException(
-                            "caught when attempting to create a new MongoScope",
-                            e);
-                } catch (InstantiationException e) {
-                    throw new MongoScopeException(
-                            "caught when attempting to create a new MongoScope",
-                            e);
-                } catch (InvocationTargetException e) {
-                    throw new MongoScopeException(
-                            "caught when attempting to create a new MongoScope",
-                            e);
-                }
-            }
-
-        });
-        
+        MongoScope mongoScope = (MongoScope) call(new MongoScope.InitMongoScopeAction());
         return mongoScope;
     }
-
+    
     /**
      * Convenience method to call the {@link MongoAction} using the global
-     * {@link ContextFactory}. The global {@link ContextFactory} has not
+     * {@link ContextFactory}. If the global {@link ContextFactory} has not
      * explicitly been set yet then this method will set an instance of
      * {@link MongoContextFactory} as the global {@link ContextFactory}.
      * 
