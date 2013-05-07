@@ -50,50 +50,44 @@ public class JSTest {
     private static File cwd = null;
 
     /**
-     * Tests containing currently unsupported/unimplemented official mongodb
-     * shell features such as:
+     * Tests containing currently unsupported/unimplemented official mongodb shell features such as:
      * 
      * startMongoProgramNoConnect() startParallelShell()
      * 
-     * evalf.js is excluded due to a locking issue that has yet to be resolved
-     * however the complexity of the test scenario makes this a safe-to-exclude
-     * for now.
+     * evalf.js is excluded due to a locking issue that has yet to be resolved however the complexity of the test
+     * scenario makes this a safe-to-exclude for now.
      * 
-     * memory.js is excluded because it is testing the mongod rather than the
-     * client api behavior (and it takes a while to run on slower machines).
-     * This test does actually pass, however.
+     * memory.js is excluded because it is testing the mongod rather than the client api behavior (and it takes a while
+     * to run on slower machines). This test does actually pass, however.
+     * 
+     * fts_blogwild.js and fts_mix.js excluded for now due to invalid operator: $** issue
+     * https://jira.mongodb.org/browse/JAVA-814
+     * 
+     * geo_s2edgecases.js and geo_s2nearComplex.js fail in the official client (v2.4.3)
      */
-    public static final List<String> excludedTests = Arrays
-            .asList(new String[] { "basicc.js", "bench_test1.js",
-                    "bench_test2.js", "bench_test3.js",
-                    "connections_opened.js", "count8.js", "coveredIndex3.js",
-                    "currentop.js", "cursora.js", "distinct3.js", "drop2.js",
-                    "evalc.js", "evalf.js", "evald.js", "explain3.js",
-                    "group7.js", "index12.js", "killop.js",
-                    "loadserverscripts.js", "memory.js", "mr_drop.js",
-                    "mr_killop.js", "orm.js", "orn.js", "queryoptimizer3.js",
-                    "queryoptimizer5.js", "remove9.js", "removeb.js",
-                    "removec.js", "shellkillop.js", "shellstartparallel.js",
-                    "shellspawn.js", "updatef.js" });
+    public static final List<String> excludedTests = Arrays.asList(new String[] { "basicc.js", "bench_test1.js",
+            "bench_test2.js", "bench_test3.js", "connections_opened.js", "count8.js", "coveredIndex3.js",
+            "currentop.js", "cursora.js", "distinct3.js", "drop2.js", "evalc.js", "evalf.js", "evald.js",
+            "explain3.js", "group7.js", "index12.js", "killop.js", "loadserverscripts.js", "memory.js", "mr_drop.js",
+            "mr_killop.js", "orm.js", "orn.js", "queryoptimizer3.js", "queryoptimizer5.js", "remove9.js", "removeb.js",
+            "removec.js", "shellkillop.js", "shellstartparallel.js", "shellspawn.js", "updatef.js", "fts_blogwild.js",
+            "fts_mix.js", "geo_s2edgecases.js", "geo_s2nearComplex.js" });
 
     /**
-     * Tests that throw an expected exception (whether by design or observed but
-     * not invalid behavior).
+     * Tests that throw an expected exception (whether by design or observed but not invalid behavior).
      */
-    public static final List<String> expectedExceptionTests = Arrays
-            .asList(new String[] { "basicb.js", "update_arraymatch3.js" });
+    public static final List<String> expectedExceptionTests = Arrays.asList(new String[] { "basicb.js",
+            "update_arraymatch3.js" });
 
     public static Map<String, Class<? extends Throwable>> expectedExceptionTypes = new Hashtable<String, Class<? extends Throwable>>();
     public static Map<String, String> expectedExceptionMessages = new Hashtable<String, String>();
 
     static {
         expectedExceptionTypes.put("basicb.js", IllegalArgumentException.class);
-        expectedExceptionMessages.put("basicb.js",
-                "fields stored in the db can't start with '$' (Bad Key: '$a')");
+        expectedExceptionMessages.put("basicb.js", "fields stored in the db can't start with '$' (Bad Key: '$a')");
         // document field order is changed although the contents are still
         // identical
-        expectedExceptionTypes.put("update_arraymatch3.js",
-                JavaScriptException.class);
+        expectedExceptionTypes.put("update_arraymatch3.js", JavaScriptException.class);
         expectedExceptionMessages
                 .put("update_arraymatch3.js",
                         "[{\n\t\"_id\" : 1,\n\t\"title\" : \"ABC\",\n\t\"comments\" : [\n\t\t{\n\t\t\t\"by\" : \"joe\",\n\t\t\t\"votes\" : 4\n\t\t},\n\t\t{\n\t\t\t\"by\" : \"jane\",\n\t\t\t\"votes\" : 7\n\t\t}\n\t]\n}] != [{\n\t\"_id\" : 1,\n\t\"comments\" : [\n\t\t{\n\t\t\t\"by\" : \"joe\",\n\t\t\t\"votes\" : 4\n\t\t},\n\t\t{\n\t\t\t\"by\" : \"jane\",\n\t\t\t\"votes\" : 7\n\t\t}\n\t],\n\t\"title\" : \"ABC\"\n}] are not equal : A2 (mongodb/assert.js#6)");
@@ -104,14 +98,13 @@ public class JSTest {
         if (cwd == null)
             cwd = new File(System.getProperty("user.dir"), "jstests");
 
-        System.out.println("searching for *.js test files in path: "
-                + cwd.toString());
+        System.out.println("searching for *.js test files in path: " + cwd.toString());
         File[] jsFiles = cwd.listFiles(new FilenameFilter() {
 
             @Override
             public boolean accept(File dir, String name) {
-                return !name.startsWith("_") && name.endsWith(".js")
-                        && (name.startsWith("find"))
+                return !name.startsWith("_") && name.endsWith(".js") 
+//                        && (name.startsWith("geo"))
                         && !excludedTests.contains(name);
             }
 
@@ -159,13 +152,12 @@ public class JSTest {
 
     @Test
     public void test() throws Exception {
-//         System.setProperty("DEBUG.MONGO", Boolean.TRUE.toString());
-//         System.setProperty("DB.TRACE", Boolean.TRUE.toString());
+        // System.setProperty("DEBUG.MONGO", Boolean.TRUE.toString());
+        // System.setProperty("DB.TRACE", Boolean.TRUE.toString());
 
         System.out.println("*** Running " + jsTestFile.getName());
         try {
-            MongoRuntime.call(new MongoScriptAction(testScope, "connect",
-                    "db = connect('test',null,null);"));
+            MongoRuntime.call(new MongoScriptAction(testScope, "connect", "db = connect('test',null,null);"));
             MongoRuntime.call(new MongoScriptAction(testScope, jsTestFile));
         } catch (WrappedException e) {
             // a few tests throw expected exceptions, unwrap them if they are
@@ -187,10 +179,8 @@ public class JSTest {
 
     private void verifyException(Exception e) throws Exception {
         if (expectedExceptionTests.contains(jsTestFile.getName())) {
-            assertEquals(expectedExceptionTypes.get(jsTestFile.getName()),
-                    e.getClass());
-            assertEquals(expectedExceptionMessages.get(jsTestFile.getName()),
-                    e.getMessage());
+            assertEquals(expectedExceptionTypes.get(jsTestFile.getName()), e.getClass());
+            assertEquals(expectedExceptionMessages.get(jsTestFile.getName()), e.getMessage());
         } else {
             throw e;
         }

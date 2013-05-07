@@ -66,12 +66,10 @@ import com.mongodb.MongoException;
 import com.mongodb.util.Util;
 
 /**
- * The MongoDB-specific {@link Scope} implementation. This extends
- * {@link Global} to add MongoDB shell JavaScript global functions objects, and
- * variables.
+ * The MongoDB-specific {@link Scope} implementation. This extends {@link Global} to add MongoDB shell JavaScript global
+ * functions objects, and variables.
  * 
- * Meant to emulate engine.cpp (and the more specific engine_*.cpp
- * implementations) in the official mongodb source.
+ * Meant to emulate engine.cpp (and the more specific engine_*.cpp implementations) in the official mongodb source.
  * 
  * @author nlloyd
  * 
@@ -89,15 +87,13 @@ public class MongoScope extends Global {
         }
     };
 
-    private static String[] mongoApiFiles = { "mongodb/assert.js",
-            "mongodb/types.js", "mongodb/utils.js", "mongodb/utils_sh.js",
-            "mongodb/db.js", "mongodb/mongo.js", "mongodb/mr.js",
-            "mongodb/query.js", "mongodb/collection.js" };
+    private static String[] mongoApiFiles = { "mongodb/assert.js", "mongodb/types.js", "mongodb/utils.js",
+            "mongodb/utils_sh.js", "mongodb/db.js", "mongodb/mongo.js", "mongodb/mr.js", "mongodb/query.js",
+            "mongodb/collection.js", "mongodb/servers_misc.js" };
 
     /**
-     * If true then some {@link MongoException} will be caught and the messages
-     * will be printed to stdout depending on behavior of the official mongodb
-     * client shell. If false then the exceptions will be rethrown.
+     * If true then some {@link MongoException} will be caught and the messages will be printed to stdout depending on
+     * behavior of the official mongodb client shell. If false then the exceptions will be rethrown.
      * 
      * Defaults to false.
      * 
@@ -106,13 +102,11 @@ public class MongoScope extends Global {
     private boolean mimicShellExceptionBehavior = false;
 
     /**
-     * {@link http
-     * ://docs.mongodb.org/manual/release-notes/drivers-write-concern/}
+     * {@link http ://docs.mongodb.org/manual/release-notes/drivers-write-concern/}
      * 
-     * Default write concern has changed for all official mongo drivers, which
-     * differs from the default mongo shell behavior. Set this flag to true
-     * configure this MongoScope to behave like mongo shell as opposed to mongo
-     * java driver (defaults to false).
+     * Default write concern has changed for all official mongo drivers, which differs from the default mongo shell
+     * behavior. Set this flag to true configure this MongoScope to behave like mongo shell as opposed to mongo java
+     * driver (defaults to false).
      */
     private boolean useMongoShellWriteConcern = false;
 
@@ -123,8 +117,7 @@ public class MongoScope extends Global {
         super();
     }
 
-    public MongoScope(Context context) throws IllegalAccessException,
-            InstantiationException, InvocationTargetException {
+    public MongoScope(Context context) throws IllegalAccessException, InstantiationException, InvocationTargetException {
         super(context);
         initMongoJS(context);
         execCoreFiles(context);
@@ -141,8 +134,7 @@ public class MongoScope extends Global {
      * @param stdoutMongoErrorMessages
      *            the stdoutMongoErrorMessages to set
      */
-    public void setMimicShellExceptionBehavior(
-            boolean mimicShellExceptionBehavior) {
+    public void setMimicShellExceptionBehavior(boolean mimicShellExceptionBehavior) {
         this.mimicShellExceptionBehavior = mimicShellExceptionBehavior;
     }
 
@@ -160,7 +152,7 @@ public class MongoScope extends Global {
     public void setUseMongoShellWriteConcern(boolean useMongoShellWriteConcern) {
         this.useMongoShellWriteConcern = useMongoShellWriteConcern;
     }
-    
+
     /**
      * @return the hasMongoPrototype
      */
@@ -169,7 +161,8 @@ public class MongoScope extends Global {
     }
 
     /**
-     * @param hasMongoPrototype the hasMongoPrototype to set
+     * @param hasMongoPrototype
+     *            the hasMongoPrototype to set
      */
     public void setHasMongoPrototype(boolean hasMongoPrototype) {
         this.hasMongoPrototype = hasMongoPrototype;
@@ -194,8 +187,8 @@ public class MongoScope extends Global {
         mongoConnections.clear();
     }
 
-    protected void initMongoJS(Context context) throws IllegalAccessException,
-            InstantiationException, InvocationTargetException {
+    protected void initMongoJS(Context context) throws IllegalAccessException, InstantiationException,
+            InvocationTargetException {
         if (!isInitialized()) {
             super.init(context);
         }
@@ -203,12 +196,10 @@ public class MongoScope extends Global {
         // context.setOptimizationLevel(-1);
 
         String[] names = { "sleep", "hex_md5", "_isWindows", "_srand", "_rand" };
-        defineFunctionProperties(names, this.getClass(),
+        defineFunctionProperties(names, this.getClass(), ScriptableObject.DONTENUM);
+        ScriptableObject objectPrototype = (ScriptableObject) ScriptableObject.getClassPrototype(this, "Object");
+        objectPrototype.defineFunctionProperties(new String[] { "bsonsize" }, this.getClass(),
                 ScriptableObject.DONTENUM);
-        ScriptableObject objectPrototype = (ScriptableObject) ScriptableObject
-                .getClassPrototype(this, "Object");
-        objectPrototype.defineFunctionProperties(new String[] { "bsonsize" },
-                this.getClass(), ScriptableObject.DONTENUM);
 
         ScriptableObject.defineClass(this, Mongo.class, false, false);
         ScriptableObject.defineClass(this, ObjectId.class, false, false);
@@ -231,24 +222,19 @@ public class MongoScope extends Global {
     protected void execCoreFiles(Context context) {
         for (String jsSetupFile : mongoApiFiles) {
             try {
-                context.evaluateReader(this, loadFromClasspath(jsSetupFile),
-                        jsSetupFile, 0, null);
+                context.evaluateReader(this, loadFromClasspath(jsSetupFile), jsSetupFile, 0, null);
             } catch (IOException e) {
-                throw new MongoScopeException(
-                        "Caught IOException attempting to load from classpath: "
-                                + jsSetupFile, e);
+                throw new MongoScopeException("Caught IOException attempting to load from classpath: " + jsSetupFile, e);
             } catch (JavaScriptException e) {
-                throw new MongoScopeException(
-                        "Caught JavaScriptException attempting to load from classpath: "
-                                + jsSetupFile, e);
+                throw new MongoScopeException("Caught JavaScriptException attempting to load from classpath: "
+                        + jsSetupFile, e);
             }
         }
     }
 
     protected Reader loadFromClasspath(String filePath) {
         Reader reader = null;
-        reader = new BufferedReader(new InputStreamReader(
-                ClassLoader.getSystemResourceAsStream(filePath)));
+        reader = new BufferedReader(new InputStreamReader(ClassLoader.getSystemResourceAsStream(filePath)));
         return reader;
     }
 
@@ -258,15 +244,28 @@ public class MongoScope extends Global {
             // check error codes that do NOT result in an exception
             switch (me.getCode()) {
             case 10088: // cannot index parallel arrays [b] [d]
+            case 10098: // bad index key pattern
             case 10148: // Mod on _id not allowed
             case 10149: // Invalid mod field name, may not end in a period
             case 10159: // multi update only works with $ operators
+            case 11000: // E11000 duplicate key error index:
             case 15896: // Modified field name may not start with $
             case 16650: // Cannot apply the positional operator without a
                         // corresponding query field containing an array.
             case 10141: // Cannot apply $push/$pushAll modifier to non-array
             case 16734: // Unknown index plugin '*' in index { *: * }
             case 10089: // can't remove from a capped collection
+            case 13023: // 2d has to be first in index
+            case 13028: // bits in geo index must be between 1 and 32
+            case 13027: // point not in interval of [ -0.99995, 0.99995 ]
+            case 16572: // Can't extract geo keys from object, malformed geometry?
+            case 16687: // coarsestIndexedLevel must be >= 0
+            case 16688: // finestIndexedLevel must be <= 30
+            case 16241: // Currently only single field hashed index supported.
+            case 16242: // Currently hashed indexes cannot guarantee uniqueness. Use a regular index.
+            case 15855: // Ambiguous field name found in array (do not use numeric field names in embedded elements in
+                        // an array)
+            case 12505: // add index fails, too many indexes
                 System.out.println(me.getMessage());
                 return;
             default:
@@ -284,25 +283,22 @@ public class MongoScope extends Global {
     // return MongoScope.print(cx, thisObj, new Object[]{}, funObj);
     // }
 
-    public static void sleep(Context cx, Scriptable thisObj, Object[] args,
-            Function funObj) throws NumberFormatException, InterruptedException {
+    public static void sleep(Context cx, Scriptable thisObj, Object[] args, Function funObj)
+            throws NumberFormatException, InterruptedException {
         Thread.sleep(Double.valueOf(args[0].toString()).longValue());
     }
 
-    public static String hex_md5(Context cx, Scriptable thisObj, Object[] args,
-            Function funObj) {
+    public static String hex_md5(Context cx, Scriptable thisObj, Object[] args, Function funObj) {
         // just like mongo native_hex_md5 call, only expects a single string
         final String str = Context.toString(args[0]);
         return Util.hexMD5(str.getBytes());
     }
 
-    public static Boolean _isWindows(Context cx, Scriptable thisObj,
-            Object[] args, Function funObj) {
+    public static Boolean _isWindows(Context cx, Scriptable thisObj, Object[] args, Function funObj) {
         return System.getProperty("os.name").startsWith("Windows");
     }
 
-    public static void _srand(Context cx, Scriptable thisObj, Object[] args,
-            Function funObj) {
+    public static void _srand(Context cx, Scriptable thisObj, Object[] args, Function funObj) {
         Random randomGen = threadLocalRandomGen.get();
         if (args[0] instanceof Long)
             randomGen.setSeed((Long) args[0]);
@@ -310,16 +306,13 @@ public class MongoScope extends Global {
             randomGen.setSeed(Double.valueOf(args[0].toString()).longValue());
     }
 
-    public static Double _rand(Context cx, Scriptable thisObj, Object[] args,
-            Function funObj) {
+    public static Double _rand(Context cx, Scriptable thisObj, Object[] args, Function funObj) {
         return threadLocalRandomGen.get().nextDouble();
     }
 
-    private static final DBEncoder bsonEncoder = DefaultDBEncoder.FACTORY
-            .create();
+    private static final DBEncoder bsonEncoder = DefaultDBEncoder.FACTORY.create();
 
-    public static Long bsonsize(Context cx, Scriptable thisObj, Object[] args,
-            Function funObj) throws IOException {
+    public static Long bsonsize(Context cx, Scriptable thisObj, Object[] args, Function funObj) throws IOException {
         DBObject bsonObj = (DBObject) BSONizer.convertJStoBSON(args[0]);
         BasicOutputBuffer byteBuffer = new BasicOutputBuffer();
         bsonEncoder.writeObject(byteBuffer, bsonObj);
@@ -339,14 +332,11 @@ public class MongoScope extends Global {
             try {
                 return new MongoScope(cx);
             } catch (IllegalAccessException e) {
-                throw new MongoScopeException(
-                        "caught when attempting to create a new MongoScope", e);
+                throw new MongoScopeException("caught when attempting to create a new MongoScope", e);
             } catch (InstantiationException e) {
-                throw new MongoScopeException(
-                        "caught when attempting to create a new MongoScope", e);
+                throw new MongoScopeException("caught when attempting to create a new MongoScope", e);
             } catch (InvocationTargetException e) {
-                throw new MongoScopeException(
-                        "caught when attempting to create a new MongoScope", e);
+                throw new MongoScopeException("caught when attempting to create a new MongoScope", e);
             }
         }
 

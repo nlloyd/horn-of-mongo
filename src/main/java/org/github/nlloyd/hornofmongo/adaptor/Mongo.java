@@ -8,6 +8,7 @@ import java.util.List;
 import org.github.nlloyd.hornofmongo.MongoRuntime;
 import org.github.nlloyd.hornofmongo.MongoScope;
 import org.github.nlloyd.hornofmongo.action.NewInstanceAction;
+import org.github.nlloyd.hornofmongo.exception.MongoScriptException;
 import org.github.nlloyd.hornofmongo.util.BSONizer;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Scriptable;
@@ -177,8 +178,10 @@ public class Mongo extends ScriptableMongoObject {
                 com.mongodb.DB db = innerMongo.getDB(ns.substring(0,
                         ns.indexOf('.')));
                 String indexNS = bsonObj.get("ns").toString();
-                DBCollection collection = db.getCollection(indexNS.substring(ns
-                        .indexOf('.') + 1));
+                int nsDividerIdx = ns.indexOf('.');
+                if(nsDividerIdx < 0)
+                    Context.throwAsScriptRuntimeEx(new MongoScriptException("invalid ns to index"));
+                DBCollection collection = db.getCollection(indexNS.substring(nsDividerIdx + 1));
                 collection.setDBEncoderFactory(FACTORY);
                 DBObject keys = (DBObject) bsonObj.get("key");
                 bsonObj.removeField("_id");

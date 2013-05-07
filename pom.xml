@@ -112,11 +112,20 @@
                 <version>2.14.1</version>
                 <configuration>
                     <workingDirectory>${project.build.directory}/test-classes</workingDirectory>
-<!--                     <parallel>methods</parallel> -->
-<!--                     <perCoreThreadCount>false</perCoreThreadCount> -->
-<!--                     <threadCount>20</threadCount> -->
                 </configuration>
             </plugin>
         </plugins>
     </build>
+
+<!--     <repositories> -->
+<!--         <repository> -->
+<!--             <id>oss-snapshot</id> -->
+<!--             <name>Sonatype OSS Snapshot Repository</name> -->
+<!--             <snapshots> -->
+<!--                 <enabled>true</enabled> -->
+<!--                 <updatePolicy>interval:90</updatePolicy> -->
+<!--             </snapshots> -->
+<!--             <url>https://oss.sonatype.org/content/repositories/snapshots</url> -->
+<!--         </repository> -->
+<!--     </repositories> -->
 </project>
