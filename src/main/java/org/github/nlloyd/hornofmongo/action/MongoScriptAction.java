@@ -102,7 +102,7 @@ public class MongoScriptAction extends MongoAction {
 					mongoScope, 
 					scriptString,
 					scriptName, 
-					1, 
+					0, 
 					null);
 		} else if(scriptReader != null) {
 			try {
@@ -110,7 +110,7 @@ public class MongoScriptAction extends MongoAction {
 						mongoScope, 
 						scriptReader,
 						scriptName, 
-						1, 
+						0, 
 						null);
 			} catch (IOException e) {
 				throw new MongoException("IOException when executing a script in Reader form.", e);

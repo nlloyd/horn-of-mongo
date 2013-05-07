@@ -22,6 +22,8 @@
 package org.github.nlloyd.hornofmongo.adaptor;
 
 import org.mozilla.javascript.Context;
+import org.mozilla.javascript.ScriptRuntime;
+import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.Undefined;
 import org.mozilla.javascript.annotations.JSConstructor;
 import org.mozilla.javascript.annotations.JSFunction;
@@ -80,6 +82,14 @@ public class NumberInt extends ScriptableMongoObject {
     public void setRealInt(Integer realInt) {
         this.realInt = realInt;
         put("floatApprox", this, realInt);
+    }
+
+    /**
+     * @see org.mozilla.javascript.ScriptableObject#equivalentValues(java.lang.Object)
+     */
+    @Override
+    protected Object equivalentValues(Object value) {
+        return ScriptRuntime.eq(this.realInt, value) ? Boolean.TRUE : Scriptable.NOT_FOUND;
     }
 
 }

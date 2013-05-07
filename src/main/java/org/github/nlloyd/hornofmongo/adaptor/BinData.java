@@ -78,5 +78,13 @@ public class BinData extends ScriptableMongoObject {
 	public String hex() {
 		return Hex.encodeHexString(data);
 	}
+	
+	public int getType() {
+	    return type;
+	}
+	
+	public byte[] getData() {
+	    return data;
+	}
 
 }

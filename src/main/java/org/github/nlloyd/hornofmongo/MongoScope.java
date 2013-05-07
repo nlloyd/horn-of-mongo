@@ -232,7 +232,7 @@ public class MongoScope extends Global {
         for (String jsSetupFile : mongoApiFiles) {
             try {
                 context.evaluateReader(this, loadFromClasspath(jsSetupFile),
-                        jsSetupFile, 1, null);
+                        jsSetupFile, 0, null);
             } catch (IOException e) {
                 throw new MongoScopeException(
                         "Caught IOException attempting to load from classpath: "
@@ -286,7 +286,7 @@ public class MongoScope extends Global {
 
     public static void sleep(Context cx, Scriptable thisObj, Object[] args,
             Function funObj) throws NumberFormatException, InterruptedException {
-        Thread.sleep(Long.valueOf(args[0].toString()));
+        Thread.sleep(Double.valueOf(args[0].toString()).longValue());
     }
 
     public static String hex_md5(Context cx, Scriptable thisObj, Object[] args,

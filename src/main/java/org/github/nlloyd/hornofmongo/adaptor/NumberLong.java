@@ -22,6 +22,8 @@
 package org.github.nlloyd.hornofmongo.adaptor;
 
 import org.mozilla.javascript.Context;
+import org.mozilla.javascript.ScriptRuntime;
+import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.Undefined;
 import org.mozilla.javascript.annotations.JSConstructor;
 import org.mozilla.javascript.annotations.JSFunction;
@@ -50,7 +52,7 @@ public class NumberLong extends ScriptableMongoObject {
             realLong = ((Number)obj).longValue();
         } else if(!(obj instanceof Undefined)) {
             String str = Context.toString(obj);
-            realLong = Long.valueOf(str);
+            realLong = Double.valueOf(str).longValue();
         }
         put("floatApprox", this, realLong);
 	}
@@ -82,6 +84,14 @@ public class NumberLong extends ScriptableMongoObject {
     public void setRealLong(Long realLong) {
         this.realLong = realLong;
         put("floatApprox", this, realLong);
+    }
+
+    /**
+     * @see org.mozilla.javascript.ScriptableObject#equivalentValues(java.lang.Object)
+     */
+    @Override
+    protected Object equivalentValues(Object value) {
+        return ScriptRuntime.eq(this.realLong, value) ? Boolean.TRUE : Scriptable.NOT_FOUND;
     }
 
 }

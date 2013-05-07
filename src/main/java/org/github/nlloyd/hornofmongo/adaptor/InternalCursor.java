@@ -21,6 +21,8 @@
  */
 package org.github.nlloyd.hornofmongo.adaptor;
 
+import java.util.List;
+
 import org.github.nlloyd.hornofmongo.MongoScope;
 import org.github.nlloyd.hornofmongo.util.BSONizer;
 import org.mozilla.javascript.ScriptableObject;
@@ -38,103 +40,105 @@ import com.mongodb.MongoException;
  */
 public class InternalCursor extends ScriptableMongoObject {
 
-	/**
+    /**
 	 * 
 	 */
-	private static final long serialVersionUID = 8770272501991840064L;
+    private static final long serialVersionUID = 8770272501991840064L;
 
-	private DBCursor cursor;
+    private DBCursor cursor;
 
-	/**
-	 * A mock result in cases where we need to simulate a findOne call to the
-	 * $cmd collection. Since we are not reimplementing the wire protocol and
-	 * are leveraging the mongo js api directly we need to do some hackery.
-	 */
-	private Object fauxFindOneResult;
-	private boolean fauxFindOneReturned = false;
+    /**
+     * A mock result in cases where we need to simulate a findOne call to the
+     * $cmd collection. Since we are not reimplementing the wire protocol and
+     * are leveraging the mongo js api directly we need to do some hackery.
+     */
+    private Object fauxFindOneResult;
+    private boolean fauxFindOneReturned = false;
 
-	public InternalCursor() {
+    public InternalCursor() {
         super();
     }
 
-	@JSConstructor
-	public InternalCursor(Object obj) {
-		super();
-		if (obj instanceof DBCursor)
-			this.cursor = (DBCursor) obj;
-		else if (!(obj instanceof Undefined))
-			this.fauxFindOneResult = obj;
-	}
+    @JSConstructor
+    public InternalCursor(Object obj) {
+        super();
+        if (obj instanceof DBCursor)
+            this.cursor = (DBCursor) obj;
+        else if (!(obj instanceof Undefined))
+            this.fauxFindOneResult = obj;
+    }
 
-	/**
-	 * @see org.mozilla.javascript.ScriptableObject#getClassName()
-	 */
-	@Override
-	public String getClassName() {
-		return this.getClass().getSimpleName();
-	}
+    /**
+     * @see org.mozilla.javascript.ScriptableObject#getClassName()
+     */
+    @Override
+    public String getClassName() {
+        return this.getClass().getSimpleName();
+    }
 
-	@JSFunction
-	public boolean hasNext() {
-		boolean haveNext = false;
-		if (cursor == null) {
-			haveNext = !fauxFindOneReturned;
-		} else {
-			try {
-				haveNext = cursor.hasNext();
-			} catch (MongoException me) {
-				handleMongoException(me);
-			}
-		}
+    @JSFunction
+    public boolean hasNext() {
+        boolean haveNext = false;
+        if (cursor == null) {
+            haveNext = !fauxFindOneReturned;
+        } else {
+            try {
+                haveNext = cursor.hasNext();
+            } catch (MongoException me) {
+                handleMongoException(me);
+            }
+        }
 
-		return haveNext;
-	}
+        return haveNext;
+    }
 
-	@JSFunction
-	public Object next() {
-		Object next = null;
-		if (cursor == null) {
-			if (!fauxFindOneReturned) {
-				fauxFindOneReturned = true;
-				next = fauxFindOneResult;
-			}
-		} else {
-			try {
-			    DBObject bsonNext = cursor.next();
-				next = BSONizer.convertBSONtoJS(mongoScope, bsonNext);
-			} catch (MongoException me) {
-				handleMongoException(me);
-			}
-		}
-		return next;
-	}
+    @JSFunction
+    public Object next() {
+        Object next = null;
+        if (cursor == null) {
+            if (!fauxFindOneReturned) {
+                fauxFindOneReturned = true;
+                next = fauxFindOneResult;
+            }
+        } else {
+            try {
+                DBObject bsonNext = cursor.next();
+                next = BSONizer.convertBSONtoJS(mongoScope, bsonNext);
+            } catch (MongoException me) {
+                handleMongoException(me);
+            }
+        }
+        return next;
+    }
 
-	/**
-	 * Fake the real objsLeftInBatch() in the JS API by returning 1 if
-	 * cursor.hasNext() returns true, 0 otherwise. This is necessary as the Java
-	 * driver does not provide a mechanism to extract this information.
-	 * 
-	 * @return
-	 */
-	@JSFunction
-	public int objsLeftInBatch() {
-		int left = 0;
-		try {
-			left = (cursor.hasNext() ? 1 : 0);
-		} catch (MongoException me) {
-		    handleMongoException(me);
-		}
-		return left;
-	}
+    @JSFunction
+    public int objsLeftInBatch() {
+        int leftInBatch = 0;
+        if (cursor == null) {
+            leftInBatch = fauxFindOneReturned ? 0 : 1;
+        } else {
+            if (cursor.hasNext()) {
+                List<Integer> batchSizes = cursor.getSizes();
+                int currentBatchIdx = cursor.numGetMores();
+                int currentBatchSize = batchSizes.get(currentBatchIdx);
+                int countUpToCurBatch = 0;
+                for (int i = 0; i < currentBatchIdx; i++)
+                    countUpToCurBatch += batchSizes.get(i);
+                leftInBatch = currentBatchSize
+                        - (cursor.numSeen() - countUpToCurBatch);
+            }
+        }
+        return leftInBatch;
+    }
 
-	public void setCursor(DBCursor cursor) {
-		this.cursor = cursor;
-	}
-	
-	private void handleMongoException(MongoException me) {
-		if(mongoScope == null)
-			mongoScope = (MongoScope) ScriptableObject.getTopLevelScope(this);
-		mongoScope.handleMongoException(me);
-	}
+    public void setCursor(DBCursor cursor) {
+        this.cursor = cursor;
+    }
+
+    private void handleMongoException(MongoException me) {
+        if (mongoScope == null)
+            mongoScope = (MongoScope) ScriptableObject.getTopLevelScope(this);
+        mongoScope.handleMongoException(me);
+    }
 
 }

@@ -43,7 +43,7 @@ public class Mongo extends ScriptableMongoObject {
     protected com.mongodb.Mongo innerMongo;
 
     protected String host;
-    
+
     @JSConstructor
     public Mongo() throws UnknownHostException {
         super();
@@ -68,7 +68,7 @@ public class Mongo extends ScriptableMongoObject {
     }
 
     public void close() {
-        if(innerMongo != null)
+        if (innerMongo != null)
             innerMongo.close();
     }
 
@@ -189,6 +189,7 @@ public class Mongo extends ScriptableMongoObject {
                     indexOpts.put(bsonKey, bsonObj.get(bsonKey));
                 }
                 collection.ensureIndex(keys, indexOpts);
+                collection.resetIndexCache();
             } else {
                 com.mongodb.DB db = innerMongo.getDB(ns.substring(0,
                         ns.indexOf('.')));

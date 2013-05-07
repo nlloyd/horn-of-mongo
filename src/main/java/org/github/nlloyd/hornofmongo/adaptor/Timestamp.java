@@ -21,11 +21,12 @@
  */
 package org.github.nlloyd.hornofmongo.adaptor;
 
+import org.mozilla.javascript.Undefined;
 import org.mozilla.javascript.annotations.JSConstructor;
 
 /**
  * @author nlloyd
- *
+ * 
  */
 public class Timestamp extends ScriptableMongoObject {
 
@@ -33,21 +34,29 @@ public class Timestamp extends ScriptableMongoObject {
      * 
      */
     private static final long serialVersionUID = 4063412321929267268L;
-    
+
     @JSConstructor
     public Timestamp() {
         super();
         put("t", this, Long.valueOf(0));
         put("i", this, Long.valueOf(0));
     }
-    
+
     @JSConstructor
     public Timestamp(Object t, Object i) {
         super();
-        long largestVal = ((2039-1970)*365*24*60*60);   // seconds between 1970=2038
-        if(Long.parseLong(t.toString()) > largestVal)
-            throw new IllegalArgumentException("The first argument must be in seconds;"
-                  + t.toString() + " is too large (max " + largestVal + ")");
+        if (t instanceof Undefined) {
+            t = Long.valueOf(0);
+            i = Long.valueOf(0);
+        } else {
+            long largestVal = ((2039 - 1970) * 365 * 24 * 60 * 60); // seconds
+                                                                    // between
+                                                                    // 1970=2038
+            if (Double.valueOf(t.toString()).longValue() > largestVal)
+                throw new IllegalArgumentException(
+                        "The first argument must be in seconds;" + t.toString()
+                                + " is too large (max " + largestVal + ")");
+        }
         put("t", this, t);
         put("i", this, i);
     }

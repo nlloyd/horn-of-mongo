@@ -60,7 +60,7 @@ public class JSTest {
      * for now.
      * 
      * memory.js is excluded because it is testing the mongod rather than the
-     * client api behavior (and it takes a while to run on slower machines).  
+     * client api behavior (and it takes a while to run on slower machines).
      * This test does actually pass, however.
      */
     public static final List<String> excludedTests = Arrays
@@ -70,8 +70,8 @@ public class JSTest {
                     "currentop.js", "cursora.js", "distinct3.js", "drop2.js",
                     "evalc.js", "evalf.js", "evald.js", "explain3.js",
                     "group7.js", "index12.js", "killop.js",
-                    "loadserverscripts.js", "memory.js", "mr_drop.js", "mr_killop.js",
-                    "orm.js", "orn.js", "queryoptimizer3.js",
+                    "loadserverscripts.js", "memory.js", "mr_drop.js",
+                    "mr_killop.js", "orm.js", "orn.js", "queryoptimizer3.js",
                     "queryoptimizer5.js", "remove9.js", "removeb.js",
                     "removec.js", "shellkillop.js", "shellstartparallel.js",
                     "shellspawn.js", "updatef.js" });
@@ -102,16 +102,16 @@ public class JSTest {
     @Parameters(name = "{0}")
     public static Iterable<Object[]> getJsTestScripts() {
         if (cwd == null)
-            cwd = new File(System.getProperty("user.dir"),
-                    "jstests");
+            cwd = new File(System.getProperty("user.dir"), "jstests");
 
-        System.out.println("searching for *.js test files in path: " + cwd.toString());
+        System.out.println("searching for *.js test files in path: "
+                + cwd.toString());
         File[] jsFiles = cwd.listFiles(new FilenameFilter() {
 
             @Override
             public boolean accept(File dir, String name) {
                 return !name.startsWith("_") && name.endsWith(".js")
-//                        && (name.startsWith("dbref"))
+                        && (name.startsWith("find"))
                         && !excludedTests.contains(name);
             }
 
@@ -128,7 +128,7 @@ public class JSTest {
 
     private File jsTestFile = null;
 
-     private static MongoScope testScope;
+    private static MongoScope testScope;
 
     public JSTest(String jsTestFileName, File jsTestFile) {
         this.jsTestFile = jsTestFile;
@@ -141,54 +141,26 @@ public class JSTest {
         // official mongo shell client
         testScope.setUseMongoShellWriteConcern(true);
         testScope.setMimicShellExceptionBehavior(true);
-//        MongoRuntime.call(new MongoAction(null) {
-//
-//            @Override
-//            public Object run(Context cx) {
-//                return null;
-//            }
-//
-//        });
-//
-//        String debugConfig = "transport=socket,suspend=y,address=9000";
-//        System.out.println("LISTENING: " + debugConfig);
-//        RhinoDebugger debugger = new RhinoDebugger(debugConfig);
-//        debugger.start();
-//        ContextFactory.getGlobal().addListener(debugger);
+        // MongoRuntime.call(new MongoAction(null) {
+        //
+        // @Override
+        // public Object run(Context cx) {
+        // return null;
+        // }
+        //
+        // });
+        //
+        // String debugConfig = "transport=socket,suspend=y,address=9000";
+        // System.out.println("LISTENING: " + debugConfig);
+        // RhinoDebugger debugger = new RhinoDebugger(debugConfig);
+        // debugger.start();
+        // ContextFactory.getGlobal().addListener(debugger);
     }
-
-    /**
-     * @throws java.lang.Exception
-     */
-    // @Before
-    // public void setUp() throws Exception {
-    // // System.setProperty("DEBUG.MONGO", Boolean.TRUE.toString());
-    // // System.setProperty("DB.TRACE", Boolean.TRUE.toString());
-    //
-    // testScope = MongoRuntime.createMongoScope();
-    // // set the exception handling behavior of the test runtime to mimic the
-    // // official mongo shell client
-    // testScope.setUseMongoShellWriteConcern(true);
-    // testScope.setMimicShellExceptionBehavior(true);
-    // }
-    //
-    // @After
-    // public void cleanup() {
-    // testScope.cleanup();
-    // if (Context.getCurrentContext() != null) {
-    // System.out.println("Context associated with thread, cleaning up");
-    // Context.exit();
-    // }
-    // testScope = null;
-    // // System.gc();
-    // }
 
     @Test
     public void test() throws Exception {
-        // System.setProperty("DEBUG.MONGO", Boolean.TRUE.toString());
-        // System.setProperty("DB.TRACE", Boolean.TRUE.toString());
-
-        System.out.println("--- on thread: " + Thread.currentThread().getId());
+//         System.setProperty("DEBUG.MONGO", Boolean.TRUE.toString());
+//         System.setProperty("DB.TRACE", Boolean.TRUE.toString());
 
         System.out.println("*** Running " + jsTestFile.getName());
         try {
@@ -204,13 +176,13 @@ public class JSTest {
             verifyException(e);
         }
 
-//        System.out.println("*** Cleaning up");
+        // System.out.println("*** Cleaning up");
         testScope.cleanup();
-//        if (Context.getCurrentContext() != null) {
-//            System.out.println("Context associated with thread, cleaning up");
-//            Context.exit();
-//        }
-//        testScope = null;
+        // if (Context.getCurrentContext() != null) {
+        // System.out.println("Context associated with thread, cleaning up");
+        // Context.exit();
+        // }
+        // testScope = null;
     }
 
     private void verifyException(Exception e) throws Exception {

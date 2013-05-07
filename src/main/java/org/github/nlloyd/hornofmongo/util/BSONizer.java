@@ -33,6 +33,7 @@ import org.github.nlloyd.hornofmongo.MongoRuntime;
 import org.github.nlloyd.hornofmongo.MongoScope;
 import org.github.nlloyd.hornofmongo.action.MongoAction;
 import org.github.nlloyd.hornofmongo.action.NewInstanceAction;
+import org.github.nlloyd.hornofmongo.adaptor.BinData;
 import org.github.nlloyd.hornofmongo.adaptor.DBPointer;
 import org.github.nlloyd.hornofmongo.adaptor.DBRef;
 import org.github.nlloyd.hornofmongo.adaptor.MaxKey;
@@ -99,6 +100,11 @@ public class BSONizer {
         } else if (jsObject instanceof ScriptableMongoObject) {
             if (jsObject instanceof ObjectId) {
                 bsonObject = ((ObjectId) jsObject).getRealObjectId();
+            } else if (jsObject instanceof BinData) {
+                BinData binData = (BinData)jsObject;
+                byte type = new Integer(binData.getType()).byteValue();
+                byte[] data = binData.getData();
+                bsonObject = new org.bson.types.Binary(type, data);
             } else if (jsObject instanceof MinKey) {
                 bsonObject = new org.bson.types.MinKey();
             } else if (jsObject instanceof MaxKey) {
