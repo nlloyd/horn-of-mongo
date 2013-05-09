@@ -37,7 +37,6 @@ public class MaxKey extends ScriptableMongoObject {
     @JSConstructor
     public MaxKey() {
         super();
-        put("$maxKey", this, 1);
     }
 
     /**
@@ -46,6 +45,11 @@ public class MaxKey extends ScriptableMongoObject {
     @Override
     public String getClassName() {
         return this.getClass().getSimpleName();
+    }
+    
+    @Override
+    public String toString() {
+        return "{ \"$maxKey\" : 1 }";
     }
 
 }

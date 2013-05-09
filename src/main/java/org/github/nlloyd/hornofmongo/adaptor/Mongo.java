@@ -1,14 +1,15 @@
 package org.github.nlloyd.hornofmongo.adaptor;
 
 import static org.github.nlloyd.hornofmongo.bson.HornOfMongoBSONEncoder.FACTORY;
+import static com.mongodb.CoreMongoApiWrapper.callInsert;
 
 import java.net.UnknownHostException;
+import java.util.Arrays;
 import java.util.List;
 
 import org.github.nlloyd.hornofmongo.MongoRuntime;
 import org.github.nlloyd.hornofmongo.MongoScope;
 import org.github.nlloyd.hornofmongo.action.NewInstanceAction;
-import org.github.nlloyd.hornofmongo.exception.MongoScriptException;
 import org.github.nlloyd.hornofmongo.util.BSONizer;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Scriptable;
@@ -124,10 +125,6 @@ public class Mongo extends ScriptableMongoObject {
         if (rawFields instanceof DBObject)
             bsonFields = (DBObject) rawFields;
 
-        // System.out.printf("find(%s, %s, %s, %d, %d, %d, %d)\n", ns,
-        // bsonQuery, bsonFields, limit, skip, batchSize,
-        // options);
-
         com.mongodb.DB db = innerMongo.getDB(ns.substring(0, ns.indexOf('.')));
         String collectionName = ns.substring(ns.indexOf('.') + 1);
         if ("$cmd".equals(collectionName)) {
@@ -143,7 +140,6 @@ public class Mongo extends ScriptableMongoObject {
                 handleMongoException(me);
             }
         } else {
-            // System.out.println("regularFind");
             DBCollection collection = db.getCollection(collectionName);
             collection.setDBEncoderFactory(FACTORY);
             DBCursor cursor = collection.find(bsonQuery, bsonFields).skip(skip)
@@ -165,47 +161,28 @@ public class Mongo extends ScriptableMongoObject {
         if (rawObj instanceof DBObject)
             bsonObj = (DBObject) rawObj;
 
-        // System.out.printf("insert(%s, %s)\n", ns, bsonObj);
-
         try {
+            int dbSeparatorIdx = ns.indexOf('.');
+            com.mongodb.DB db = innerMongo.getDB(ns
+                    .substring(0, dbSeparatorIdx));
+            String collectionName = ns.substring(dbSeparatorIdx + 1);
+            DBCollection collection = db.getCollection(collectionName);
+            collection.setDBEncoderFactory(FACTORY);
             // unfortunately the Java driver does not expose the _allow_dot
-            // argument
-            // in insert calls so we need to translate system.indexes inserts
-            // into
-            // index creation calls through the java driver
-            if (ns.endsWith("system.indexes")) {
-                // System.out.printf("ensureIndex(%s, %s)\n", ns, bsonObj);
-                com.mongodb.DB db = innerMongo.getDB(ns.substring(0,
-                        ns.indexOf('.')));
-                String indexNS = bsonObj.get("ns").toString();
-                int nsDividerIdx = ns.indexOf('.');
-                if(nsDividerIdx < 0)
-                    Context.throwAsScriptRuntimeEx(new MongoScriptException("invalid ns to index"));
-                DBCollection collection = db.getCollection(indexNS.substring(nsDividerIdx + 1));
-                collection.setDBEncoderFactory(FACTORY);
-                DBObject keys = (DBObject) bsonObj.get("key");
-                bsonObj.removeField("_id");
-                bsonObj.removeField("ns");
-                bsonObj.removeField("key");
-                DBObject indexOpts = new BasicDBObject();
-                for (String bsonKey : bsonObj.keySet()) {
-                    indexOpts.put(bsonKey, bsonObj.get(bsonKey));
-                }
-                collection.ensureIndex(keys, indexOpts);
-                collection.resetIndexCache();
+            // argument in insert calls so we need to translate system.indexes
+            // inserts into index creation calls through the java driver
+            if (collectionName.endsWith("system.indexes")) {
+                callInsert(db.getCollection("system.indexes"), Arrays.asList(bsonObj), false);
             } else {
-                com.mongodb.DB db = innerMongo.getDB(ns.substring(0,
-                        ns.indexOf('.')));
-                DBCollection collection = db.getCollection(ns.substring(ns
-                        .indexOf('.') + 1));
-                collection.setDBEncoderFactory(FACTORY);
                 int oldOptions = collection.getOptions();
                 collection.setOptions(options);
 
+                List insertObj = null;
                 if (rawObj instanceof List)
-                    collection.insert((List) rawObj);
+                    insertObj = (List)rawObj;
                 else
-                    collection.insert(bsonObj);
+                    insertObj = Arrays.asList(rawObj);
+                callInsert(collection, insertObj, false);
                 collection.setOptions(oldOptions);
             }
         } catch (MongoException me) {
@@ -219,8 +196,6 @@ public class Mongo extends ScriptableMongoObject {
         DBObject bsonPattern = null;
         if (rawPattern instanceof DBObject)
             bsonPattern = (DBObject) rawPattern;
-
-        // System.out.printf("remove(%s, %s)\n", ns, bsonPattern);
 
         com.mongodb.DB db = innerMongo.getDB(ns.substring(0, ns.indexOf('.')));
         DBCollection collection = db
@@ -248,9 +223,6 @@ public class Mongo extends ScriptableMongoObject {
 
         boolean upsertOp = (upsert != null) ? upsert : false;
         boolean multiOp = (multi != null) ? multi : false;
-
-        // System.out.printf("update(%s, %s, %s, %b)\n", ns, bsonQuery, bsonObj,
-        // upsert);
 
         com.mongodb.DB db = innerMongo.getDB(ns.substring(0, ns.indexOf('.')));
         DBCollection collection = db

@@ -34,8 +34,12 @@ public class Timestamp extends ScriptableMongoObject {
      * 
      */
     private static final long serialVersionUID = 4063412321929267268L;
+    
+    /**
+     * seconds between 1970 and 2038
+     */
+    public static final long largestVal = ((2039l - 1970l) * 365l * 24l * 60l * 60l);
 
-    @JSConstructor
     public Timestamp() {
         super();
         put("t", this, Long.valueOf(0));
@@ -49,9 +53,6 @@ public class Timestamp extends ScriptableMongoObject {
             t = Long.valueOf(0);
             i = Long.valueOf(0);
         } else {
-            long largestVal = ((2039 - 1970) * 365 * 24 * 60 * 60); // seconds
-                                                                    // between
-                                                                    // 1970=2038
             if (Double.valueOf(t.toString()).longValue() > largestVal)
                 throw new IllegalArgumentException(
                         "The first argument must be in seconds;" + t.toString()

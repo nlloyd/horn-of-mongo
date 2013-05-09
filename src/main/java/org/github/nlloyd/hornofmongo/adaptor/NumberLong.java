@@ -85,6 +85,10 @@ public class NumberLong extends ScriptableMongoObject {
         this.realLong = realLong;
         put("floatApprox", this, realLong);
     }
+    
+    public long getRealLong() {
+        return this.realLong;
+    }
 
     /**
      * @see org.mozilla.javascript.ScriptableObject#equivalentValues(java.lang.Object)
@@ -92,6 +96,17 @@ public class NumberLong extends ScriptableMongoObject {
     @Override
     protected Object equivalentValues(Object value) {
         return ScriptRuntime.eq(this.realLong, value) ? Boolean.TRUE : Scriptable.NOT_FOUND;
+    }
+
+    /**
+     * @see org.mozilla.javascript.ScriptableObject#getDefaultValue(java.lang.Class)
+     */
+    @Override
+    public Object getDefaultValue(Class<?> typeHint) {
+        if(String.class.equals(typeHint))
+            return this.toString();
+        else
+            return this.realLong;
     }
 
 }

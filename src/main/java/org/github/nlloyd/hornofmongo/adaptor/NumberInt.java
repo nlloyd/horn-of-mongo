@@ -83,6 +83,10 @@ public class NumberInt extends ScriptableMongoObject {
         this.realInt = realInt;
         put("floatApprox", this, realInt);
     }
+    
+    public int getRealInt() {
+        return this.realInt;
+    }
 
     /**
      * @see org.mozilla.javascript.ScriptableObject#equivalentValues(java.lang.Object)
@@ -90,6 +94,17 @@ public class NumberInt extends ScriptableMongoObject {
     @Override
     protected Object equivalentValues(Object value) {
         return ScriptRuntime.eq(this.realInt, value) ? Boolean.TRUE : Scriptable.NOT_FOUND;
+    }
+
+    /**
+     * @see org.mozilla.javascript.ScriptableObject#getDefaultValue(java.lang.Class)
+     */
+    @Override
+    public Object getDefaultValue(Class<?> typeHint) {
+        if(String.class.equals(typeHint))
+            return this.toString();
+        else
+            return this.realInt;
     }
 
 }

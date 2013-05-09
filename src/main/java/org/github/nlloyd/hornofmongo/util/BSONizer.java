@@ -64,7 +64,6 @@ import com.mongodb.Bytes;
  */
 public class BSONizer {
 
-    @SuppressWarnings("deprecation")
     public static Object convertJStoBSON(Object jsObject) {
         Object bsonObject = null;
         if (jsObject instanceof NativeArray) {
@@ -98,37 +97,20 @@ public class BSONizer {
                 bson.put(key.toString(), convertJStoBSON(value));
             }
         } else if (jsObject instanceof ScriptableMongoObject) {
-            if (jsObject instanceof ObjectId) {
-                bsonObject = ((ObjectId) jsObject).getRealObjectId();
-            } else if (jsObject instanceof BinData) {
-                BinData binData = (BinData)jsObject;
-                byte type = new Integer(binData.getType()).byteValue();
-                byte[] data = binData.getData();
-                bsonObject = new org.bson.types.Binary(type, data);
-            } else if (jsObject instanceof MinKey) {
-                bsonObject = new org.bson.types.MinKey();
-            } else if (jsObject instanceof MaxKey) {
-                bsonObject = new org.bson.types.MaxKey();
-            } else if (jsObject instanceof NumberInt) {
-                bsonObject = ((NumberInt) jsObject).valueOf();
-            } else if (jsObject instanceof NumberLong) {
-                bsonObject = ((NumberLong) jsObject).valueOf();
-            } else if (jsObject instanceof DBRef) {
-                DBRef jsRef = (DBRef) jsObject;
-                Object id = convertJStoBSON(jsRef.getId());
-                bsonObject = new com.mongodb.DBRef(null, jsRef.getNs(), id);
-            } else if (jsObject instanceof DBPointer) {
-                DBPointer jsPointer = (DBPointer) jsObject;
-                bsonObject = new com.mongodb.DBPointer(jsPointer.getNs(),
-                        jsPointer.getId().getRealObjectId());
-            } else if (jsObject instanceof Timestamp) {
-                // TODO ???
-            }
+            bsonObject = convertScriptableMongoToBSON((ScriptableMongoObject)jsObject);
         } else if (jsObject instanceof BaseFunction) {
-            // comes from eval calls
-            String decompiledCode = (String) MongoRuntime
-                    .call(new JSDecompileAction((BaseFunction) jsObject));
-            bsonObject = new Code(decompiledCode);
+            BaseFunction funcObject = (BaseFunction)jsObject;
+            Object classPrototype = ScriptableObject.getClassPrototype(funcObject, funcObject.getFunctionName());
+            if(classPrototype instanceof ScriptableMongoObject) {
+                // this is a special case handler for instances where MinKey or MaxKey are provided without explicit constructor calls
+                // index_check3.js does this
+                bsonObject = convertScriptableMongoToBSON((ScriptableMongoObject)classPrototype);
+            } else {
+                // comes from eval calls
+                String decompiledCode = (String) MongoRuntime
+                        .call(new JSDecompileAction(funcObject));
+                bsonObject = new Code(decompiledCode);
+            }
         } else if (jsObject instanceof ScriptableObject) {
             // we found a ScriptableObject that isn't any of the concrete
             // ScriptableObjects above...
@@ -145,6 +127,21 @@ public class BSONizer {
             bsonObject = jsObject.toString();
         } else if (jsObject instanceof Undefined) {
             bsonObject = jsObject;
+        } else if (jsObject instanceof Double) {
+            Double jsNumber = (Double)jsObject;
+            // check is this really is a floating point value
+            if(jsNumber == jsNumber.longValue()) {
+                long longVal = jsNumber.longValue();
+                // are we really a long?
+                if((longVal > Integer.MAX_VALUE) || (longVal < Integer.MIN_VALUE)) {
+                    bsonObject = Long.valueOf(longVal);
+                } else {
+                    // nope, an integer
+                    bsonObject = Integer.valueOf((int)longVal);
+                }
+            } else {
+                bsonObject = jsObject;
+            }
         } else {
             bsonObject = jsObject;
         }
@@ -250,6 +247,38 @@ public class BSONizer {
         } else {
             return value;
         }
+    }
+    
+    @SuppressWarnings("deprecation")
+    private static Object convertScriptableMongoToBSON(ScriptableMongoObject jsMongoObj) {
+        Object bsonObject = null;
+        if (jsMongoObj instanceof ObjectId) {
+            bsonObject = ((ObjectId) jsMongoObj).getRealObjectId();
+        } else if (jsMongoObj instanceof BinData) {
+            BinData binData = (BinData)jsMongoObj;
+            byte type = new Integer(binData.getType()).byteValue();
+            byte[] data = binData.getData();
+            bsonObject = new org.bson.types.Binary(type, data);
+        } else if (jsMongoObj instanceof MinKey) {
+            bsonObject = new org.bson.types.MinKey();
+        } else if (jsMongoObj instanceof MaxKey) {
+            bsonObject = new org.bson.types.MaxKey();
+        } else if (jsMongoObj instanceof NumberInt) {
+            bsonObject = Integer.valueOf(((NumberInt) jsMongoObj).getRealInt());
+        } else if (jsMongoObj instanceof NumberLong) {
+            bsonObject = Long.valueOf(((NumberLong) jsMongoObj).getRealLong());
+        } else if (jsMongoObj instanceof DBRef) {
+            DBRef jsRef = (DBRef) jsMongoObj;
+            Object id = convertJStoBSON(jsRef.getId());
+            bsonObject = new com.mongodb.DBRef(null, jsRef.getNs(), id);
+        } else if (jsMongoObj instanceof DBPointer) {
+            DBPointer jsPointer = (DBPointer) jsMongoObj;
+            bsonObject = new com.mongodb.DBPointer(jsPointer.getNs(),
+                    jsPointer.getId().getRealObjectId());
+        } else if (jsMongoObj instanceof Timestamp) {
+            // TODO ???
+        }
+        return bsonObject;
     }
 
     private static class JSPopulatePropertyAction extends MongoAction {

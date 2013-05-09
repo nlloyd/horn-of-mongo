@@ -37,7 +37,6 @@ public class MinKey extends ScriptableMongoObject {
     @JSConstructor
     public MinKey() {
         super();
-        put("$minKey", this, 1);
     }
 
     /**
@@ -46,6 +45,11 @@ public class MinKey extends ScriptableMongoObject {
     @Override
     public String getClassName() {
         return this.getClass().getSimpleName();
+    }
+    
+    @Override
+    public String toString() {
+        return "{ \"$minKey\" : 1 }";
     }
 
 }
