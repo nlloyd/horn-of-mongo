@@ -21,6 +21,7 @@
  */
 package org.github.nlloyd.hornofmongo.adaptor;
 
+import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.annotations.JSConstructor;
 
@@ -94,12 +95,11 @@ public class DBRef extends ScriptableMongoObject {
      */
     @Override
     public void put(String name, Scriptable start, Object value) {
-        if(name.startsWith("$"))
-            System.err.println(name);
-        // TODO Auto-generated method stub
+        if("$id".equals(name))
+            this.id = value;
+        else if("$ref".equals(name))
+            this.ns = Context.toString(value);
         super.put(name, start, value);
     }
-    
-    
 
 }

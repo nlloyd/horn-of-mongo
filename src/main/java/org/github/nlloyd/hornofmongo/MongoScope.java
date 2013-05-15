@@ -33,6 +33,9 @@ import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
 
+import org.apache.commons.codec.DecoderException;
+import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.codec.binary.Hex;
 import org.bson.BSON;
 import org.bson.io.BasicOutputBuffer;
 import org.github.nlloyd.hornofmongo.action.MongoAction;
@@ -356,7 +359,7 @@ public class MongoScope extends Global {
 
     public static final BinData UUID(Context cx, Scriptable thisObj,
             Object[] args, Function funObj) {
-        String str = Context.toString(args[0]);
+        String str = hexToBase64(Context.toString(args[0]));
         BinData uuid = (BinData) MongoRuntime.call(new NewInstanceAction(
                 (MongoScope) thisObj, "BinData", new Object[] { BSON.B_UUID, str }));
         return uuid;
@@ -364,7 +367,7 @@ public class MongoScope extends Global {
 
     public static final BinData MD5(Context cx, Scriptable thisObj,
             Object[] args, Function funObj) {
-        String str = Context.toString(args[0]);
+        String str = hexToBase64(Context.toString(args[0]));
         // MD5Type = 5 in bsontypes.h
         BinData md5 = (BinData) MongoRuntime.call(new NewInstanceAction(
                 (MongoScope) thisObj, "BinData", new Object[] { 5, str }));
@@ -374,10 +377,20 @@ public class MongoScope extends Global {
     public static final BinData HexData(Context cx, Scriptable thisObj,
             Object[] args, Function funObj) {
         int type = Double.valueOf(Context.toNumber(args[0])).intValue();
-        String str = Context.toString(args[1]);
+        String str = hexToBase64(Context.toString(args[1]));
         BinData md5 = (BinData) MongoRuntime.call(new NewInstanceAction(
                 (MongoScope) thisObj, "BinData", new Object[] { type, str }));
         return md5;
+    }
+    
+    private static final String hexToBase64(final String hex) {
+        String base64 = null;
+        try {
+            base64 = Base64.encodeBase64String(Hex.decodeHex(hex.toCharArray()));
+        } catch (DecoderException e) {
+            Context.throwAsScriptRuntimeEx(e);
+        }
+        return base64;
     }
 
     public static final class InitMongoScopeAction extends MongoAction {

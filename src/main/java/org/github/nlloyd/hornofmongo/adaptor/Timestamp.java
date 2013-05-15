@@ -21,6 +21,8 @@
  */
 package org.github.nlloyd.hornofmongo.adaptor;
 
+import org.apache.commons.lang3.math.NumberUtils;
+import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Undefined;
 import org.mozilla.javascript.annotations.JSConstructor;
 
@@ -39,27 +41,36 @@ public class Timestamp extends ScriptableMongoObject {
      * seconds between 1970 and 2038
      */
     public static final long largestVal = ((2039l - 1970l) * 365l * 24l * 60l * 60l);
+    
+    private long t;
+    private long i;
 
     public Timestamp() {
         super();
-        put("t", this, Long.valueOf(0));
-        put("i", this, Long.valueOf(0));
+        t = 0l;
+        i = 0l;
+        put("t", this, t);
+        put("i", this, i);
     }
 
     @JSConstructor
     public Timestamp(Object t, Object i) {
         super();
         if (t instanceof Undefined) {
-            t = Long.valueOf(0);
-            i = Long.valueOf(0);
+            this.t = 0l;
+            this.i = 0l;
         } else {
-            if (Double.valueOf(t.toString()).longValue() > largestVal)
+            Number tNum = NumberUtils.createNumber(Context.toString(t));
+            Number iNum = NumberUtils.createNumber(Context.toString(i));
+            if (tNum.longValue() > largestVal)
                 throw new IllegalArgumentException(
                         "The first argument must be in seconds;" + t.toString()
                                 + " is too large (max " + largestVal + ")");
+            this.t = tNum.longValue();
+            this.i = iNum.longValue();
         }
-        put("t", this, t);
-        put("i", this, i);
+        put("t", this, this.t);
+        put("i", this, this.i);
     }
 
     /**
@@ -70,4 +81,12 @@ public class Timestamp extends ScriptableMongoObject {
         return this.getClass().getSimpleName();
     }
 
+    public long getT() {
+        return t;
+    }
+
+    public long getI() {
+        return i;
+    }
+    
 }

@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 import org.bson.BSONObject;
+import org.bson.types.BSONTimestamp;
 import org.bson.types.Code;
 import org.bson.types.Symbol;
 import org.github.nlloyd.hornofmongo.MongoRuntime;
@@ -201,15 +202,16 @@ public class BSONizer {
             oid.setRealObjectId(dbPointer.getId());
             jsObject = MongoRuntime.call(new NewInstanceAction(mongoScope,
                     "DBPointer", new Object[] { dbPointer.getRef(), oid }));
+        } else if (bsonObject instanceof BSONTimestamp) {
+            BSONTimestamp bsonTstamp = (BSONTimestamp)bsonObject;
+            jsObject = MongoRuntime.call(new NewInstanceAction(mongoScope,
+                    "Timestamp", new Object[]{bsonTstamp.getTime(), bsonTstamp.getInc()}));
         } else if (bsonObject instanceof Long) {
             jsObject = MongoRuntime.call(new NewInstanceAction(mongoScope,
                     "NumberLong"));
             ((NumberLong) jsObject).setRealLong((Long) bsonObject);
         } else if (bsonObject instanceof Integer) {
             jsObject = Double.valueOf((Integer)bsonObject);
-//            jsObject = MongoRuntime.call(new NewInstanceAction(mongoScope,
-//                    "NumberInt"));
-//            ((NumberInt) jsObject).setRealInt((Integer) bsonObject);
         } else if (bsonObject instanceof Code) {
             jsObject = ((Code) bsonObject).getCode();
         } else {
@@ -271,9 +273,37 @@ public class BSONizer {
             bsonObject = new com.mongodb.DBPointer(jsPointer.getNs(),
                     jsPointer.getId().getRealObjectId());
         } else if (jsMongoObj instanceof Timestamp) {
-            // TODO ???
+            bsonObject = convertTimestampToBSONTimestamp((Timestamp)jsMongoObj);
         }
         return bsonObject;
+    }
+    
+    /**
+     *  seconds since epoch, used for Timestamp to BSONTimestamp conversion
+     */
+    private static int lastSecFromEpoch;
+    
+    /**
+     * ordinal used for Timestamp to BSONTimestamp conversion
+     */
+    private static int timestampIncrementer = 1;
+    
+    private static synchronized BSONTimestamp convertTimestampToBSONTimestamp(Timestamp tstamp) {
+        BSONTimestamp bsTstamp;
+        int newTimeInSec = (int)tstamp.getT();
+        if(newTimeInSec == 0) {
+            newTimeInSec = (int)(new Date().getTime() / 1000);
+            // seconds from epoch has changed, reset ordinal and set the new lastSecFromEpoch value
+            if(newTimeInSec != lastSecFromEpoch) {
+                lastSecFromEpoch = newTimeInSec;
+                timestampIncrementer = 1;
+            } else
+                timestampIncrementer++;   
+            bsTstamp =  new BSONTimestamp(lastSecFromEpoch, timestampIncrementer);
+        } else
+            bsTstamp = new BSONTimestamp(newTimeInSec, (int)tstamp.getI());
+        
+        return bsTstamp;
     }
 
     private static class JSPopulatePropertyAction extends MongoAction {
