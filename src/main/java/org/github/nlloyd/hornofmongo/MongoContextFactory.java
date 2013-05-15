@@ -23,7 +23,6 @@ package org.github.nlloyd.hornofmongo;
 
 import static org.mozilla.javascript.Context.FEATURE_DYNAMIC_SCOPE;
 import static org.mozilla.javascript.Context.FEATURE_LOCATION_INFORMATION_IN_ERROR;
-import static org.mozilla.javascript.Context.FEATURE_WARNING_AS_ERROR;
 
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ContextFactory;
@@ -42,7 +41,6 @@ public class MongoContextFactory extends ContextFactory {
     @Override
     public boolean hasFeature(Context cx, int featureIndex) {
         switch (featureIndex) {
-        case FEATURE_WARNING_AS_ERROR:
         case FEATURE_LOCATION_INFORMATION_IN_ERROR:
         case FEATURE_DYNAMIC_SCOPE:
             return true;

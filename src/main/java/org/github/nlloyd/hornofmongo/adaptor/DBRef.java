@@ -21,6 +21,7 @@
  */
 package org.github.nlloyd.hornofmongo.adaptor;
 
+import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.annotations.JSConstructor;
 
 /**
@@ -87,5 +88,18 @@ public class DBRef extends ScriptableMongoObject {
         this.id = id;
         put("$id", this, id);
     }
+
+    /* (non-Javadoc)
+     * @see org.mozilla.javascript.ScriptableObject#put(java.lang.String, org.mozilla.javascript.Scriptable, java.lang.Object)
+     */
+    @Override
+    public void put(String name, Scriptable start, Object value) {
+        if(name.startsWith("$"))
+            System.err.println(name);
+        // TODO Auto-generated method stub
+        super.put(name, start, value);
+    }
+    
+    
 
 }

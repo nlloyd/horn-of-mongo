@@ -33,8 +33,10 @@ import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
 
+import org.bson.BSON;
 import org.bson.io.BasicOutputBuffer;
 import org.github.nlloyd.hornofmongo.action.MongoAction;
+import org.github.nlloyd.hornofmongo.action.NewInstanceAction;
 import org.github.nlloyd.hornofmongo.adaptor.BinData;
 import org.github.nlloyd.hornofmongo.adaptor.DB;
 import org.github.nlloyd.hornofmongo.adaptor.DBCollection;
@@ -204,7 +206,8 @@ public class MongoScope extends Global {
 
         // context.setOptimizationLevel(-1);
 
-        String[] names = { "sleep", "hex_md5", "_isWindows", "_srand", "_rand" };
+        String[] names = { "sleep", "hex_md5", "_isWindows", "_srand", "_rand",
+                "UUID", "MD5", "HexData" };
         defineFunctionProperties(names, this.getClass(),
                 ScriptableObject.DONTENUM);
         ScriptableObject objectPrototype = (ScriptableObject) ScriptableObject
@@ -339,7 +342,7 @@ public class MongoScope extends Global {
 
     public static Long bsonsize(Context cx, Scriptable thisObj, Object[] args,
             Function funObj) throws IOException {
-        DBObject bsonObj = (DBObject) BSONizer.convertJStoBSON(args[0]);
+        DBObject bsonObj = (DBObject) BSONizer.convertJStoBSON(args[0], true);
         Long size = new Long(0);
         if (bsonObj != null) {
             BasicOutputBuffer byteBuffer = new BasicOutputBuffer();
@@ -349,6 +352,32 @@ public class MongoScope extends Global {
             size = new Long(byteStream.size());
         }
         return size;
+    }
+
+    public static final BinData UUID(Context cx, Scriptable thisObj,
+            Object[] args, Function funObj) {
+        String str = Context.toString(args[0]);
+        BinData uuid = (BinData) MongoRuntime.call(new NewInstanceAction(
+                (MongoScope) thisObj, "BinData", new Object[] { BSON.B_UUID, str }));
+        return uuid;
+    }
+
+    public static final BinData MD5(Context cx, Scriptable thisObj,
+            Object[] args, Function funObj) {
+        String str = Context.toString(args[0]);
+        // MD5Type = 5 in bsontypes.h
+        BinData md5 = (BinData) MongoRuntime.call(new NewInstanceAction(
+                (MongoScope) thisObj, "BinData", new Object[] { 5, str }));
+        return md5;
+    }
+
+    public static final BinData HexData(Context cx, Scriptable thisObj,
+            Object[] args, Function funObj) {
+        int type = Double.valueOf(Context.toNumber(args[0])).intValue();
+        String str = Context.toString(args[1]);
+        BinData md5 = (BinData) MongoRuntime.call(new NewInstanceAction(
+                (MongoScope) thisObj, "BinData", new Object[] { type, str }));
+        return md5;
     }
 
     public static final class InitMongoScopeAction extends MongoAction {

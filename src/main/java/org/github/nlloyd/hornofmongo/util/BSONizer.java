@@ -64,14 +64,14 @@ import com.mongodb.Bytes;
  */
 public class BSONizer {
 
-    public static Object convertJStoBSON(Object jsObject) {
+    public static Object convertJStoBSON(Object jsObject, boolean isJsObj) {
         Object bsonObject = null;
         if (jsObject instanceof NativeArray) {
             NativeArray jsArray = (NativeArray) jsObject;
             List<Object> bsonArray = new ArrayList<Object>(Long.valueOf(
                     jsArray.getLength()).intValue());
             for (Object jsEntry : jsArray) {
-                bsonArray.add(convertJStoBSON(jsEntry));
+                bsonArray.add(convertJStoBSON(jsEntry, isJsObj));
             }
             bsonObject = bsonArray;
         } else if (jsObject instanceof NativeRegExp) {
@@ -91,20 +91,18 @@ public class BSONizer {
 
             NativeObject rawJsObject = (NativeObject) jsObject;
             for (Object key : rawJsObject.keySet()) {
-                // System.out.printf("obj has: %s -> %s\n", jsEntry.getKey(),
-                // jsEntry.getValue());
                 Object value = extractJSProperty(rawJsObject, key);
-                bson.put(key.toString(), convertJStoBSON(value));
+                bson.put(key.toString(), convertJStoBSON(value, isJsObj));
             }
         } else if (jsObject instanceof ScriptableMongoObject) {
-            bsonObject = convertScriptableMongoToBSON((ScriptableMongoObject)jsObject);
+            bsonObject = convertScriptableMongoToBSON((ScriptableMongoObject)jsObject, isJsObj);
         } else if (jsObject instanceof BaseFunction) {
             BaseFunction funcObject = (BaseFunction)jsObject;
             Object classPrototype = ScriptableObject.getClassPrototype(funcObject, funcObject.getFunctionName());
-            if(classPrototype instanceof ScriptableMongoObject) {
+            if((classPrototype instanceof MinKey) || (classPrototype instanceof MaxKey)) {
                 // this is a special case handler for instances where MinKey or MaxKey are provided without explicit constructor calls
                 // index_check3.js does this
-                bsonObject = convertScriptableMongoToBSON((ScriptableMongoObject)classPrototype);
+                bsonObject = convertScriptableMongoToBSON((ScriptableMongoObject)classPrototype, isJsObj);
             } else {
                 // comes from eval calls
                 String decompiledCode = (String) MongoRuntime
@@ -127,21 +125,13 @@ public class BSONizer {
             bsonObject = jsObject.toString();
         } else if (jsObject instanceof Undefined) {
             bsonObject = jsObject;
-        } else if (jsObject instanceof Double) {
-            Double jsNumber = (Double)jsObject;
-            // check is this really is a floating point value
-            if(jsNumber == jsNumber.longValue()) {
-                long longVal = jsNumber.longValue();
-                // are we really a long?
-                if((longVal > Integer.MAX_VALUE) || (longVal < Integer.MIN_VALUE)) {
-                    bsonObject = Long.valueOf(longVal);
-                } else {
-                    // nope, an integer
-                    bsonObject = Integer.valueOf((int)longVal);
-                }
-            } else {
-                bsonObject = jsObject;
-            }
+        } else if (jsObject instanceof Integer) {
+            // this may seem strange, but JavaScript only knows about the number type
+            // which means in the official client we need to pass a Double
+            // this applies to Long and Integer values
+            bsonObject = Double.valueOf((Integer)jsObject);
+        } else if (jsObject instanceof Long) {
+            bsonObject = Double.valueOf((Long)jsObject);
         } else {
             bsonObject = jsObject;
         }
@@ -215,6 +205,11 @@ public class BSONizer {
             jsObject = MongoRuntime.call(new NewInstanceAction(mongoScope,
                     "NumberLong"));
             ((NumberLong) jsObject).setRealLong((Long) bsonObject);
+        } else if (bsonObject instanceof Integer) {
+            jsObject = Double.valueOf((Integer)bsonObject);
+//            jsObject = MongoRuntime.call(new NewInstanceAction(mongoScope,
+//                    "NumberInt"));
+//            ((NumberInt) jsObject).setRealInt((Integer) bsonObject);
         } else if (bsonObject instanceof Code) {
             jsObject = ((Code) bsonObject).getCode();
         } else {
@@ -250,14 +245,14 @@ public class BSONizer {
     }
     
     @SuppressWarnings("deprecation")
-    private static Object convertScriptableMongoToBSON(ScriptableMongoObject jsMongoObj) {
+    private static Object convertScriptableMongoToBSON(ScriptableMongoObject jsMongoObj, boolean isJsObj) {
         Object bsonObject = null;
         if (jsMongoObj instanceof ObjectId) {
             bsonObject = ((ObjectId) jsMongoObj).getRealObjectId();
         } else if (jsMongoObj instanceof BinData) {
             BinData binData = (BinData)jsMongoObj;
             byte type = new Integer(binData.getType()).byteValue();
-            byte[] data = binData.getData();
+            byte[] data = binData.getData().getBytes();
             bsonObject = new org.bson.types.Binary(type, data);
         } else if (jsMongoObj instanceof MinKey) {
             bsonObject = new org.bson.types.MinKey();
@@ -269,7 +264,7 @@ public class BSONizer {
             bsonObject = Long.valueOf(((NumberLong) jsMongoObj).getRealLong());
         } else if (jsMongoObj instanceof DBRef) {
             DBRef jsRef = (DBRef) jsMongoObj;
-            Object id = convertJStoBSON(jsRef.getId());
+            Object id = convertJStoBSON(jsRef.getId(), isJsObj);
             bsonObject = new com.mongodb.DBRef(null, jsRef.getNs(), id);
         } else if (jsMongoObj instanceof DBPointer) {
             DBPointer jsPointer = (DBPointer) jsMongoObj;

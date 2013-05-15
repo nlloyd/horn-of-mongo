@@ -75,6 +75,9 @@ public class JSTest {
      * fts_blogwild.js and fts_mix.js excluded for now due to invalid operator:
      * $** issue https://jira.mongodb.org/browse/JAVA-814
      * 
+     * remove_justone.js excluded until the mongo java driver supports that feature:
+     * https://jira.mongodb.org/browse/JAVA-759
+     * 
      */
     public static final List<String> excludedTests = Arrays
             .asList(new String[] { "basicc.js", "bench_test1.js",
@@ -89,14 +92,18 @@ public class JSTest {
                     "queryoptimizer5.js", "remove9.js", "removeb.js",
                     "removec.js", "shellkillop.js", "shellstartparallel.js",
                     "shellspawn.js", "updatef.js", "fts_blogwild.js",
-                    "fts_mix.js", "run_program1.js", "indexOtherNamespace.js" });
+                    "fts_mix.js", "run_program1.js", "indexOtherNamespace.js",
+                    "remove_justone.js" });
 
     /**
      * Tests that throw an expected exception (whether by design or observed but
      * not invalid behavior).
+     * 
+     * numberint.js is a special case since there IS a fix for
      */
     public static final List<String> expectedExceptionTests = Arrays
-            .asList(new String[] { "basicb.js", "update_arraymatch3.js" });
+            .asList(new String[] { "basicb.js", "update_arraymatch3.js",
+                    "numberint.js" });
 
     public static Map<String, Class<? extends Throwable>> expectedExceptionTypes = new Hashtable<String, Class<? extends Throwable>>();
     public static Map<String, String> expectedExceptionMessages = new Hashtable<String, String>();
@@ -112,6 +119,9 @@ public class JSTest {
         expectedExceptionMessages
                 .put("update_arraymatch3.js",
                         "[{\n\t\"_id\" : 1,\n\t\"title\" : \"ABC\",\n\t\"comments\" : [\n\t\t{\n\t\t\t\"by\" : \"joe\",\n\t\t\t\"votes\" : 4\n\t\t},\n\t\t{\n\t\t\t\"by\" : \"jane\",\n\t\t\t\"votes\" : 7\n\t\t}\n\t]\n}] != [{\n\t\"_id\" : 1,\n\t\"comments\" : [\n\t\t{\n\t\t\t\"by\" : \"joe\",\n\t\t\t\"votes\" : 4\n\t\t},\n\t\t{\n\t\t\t\"by\" : \"jane\",\n\t\t\t\"votes\" : 7\n\t\t}\n\t],\n\t\"title\" : \"ABC\"\n}] are not equal : A2 (mongodb/assert.js#6)");
+        expectedExceptionTypes.put("numberint.js", JavaScriptException.class);
+        expectedExceptionMessages.put("numberint.js",
+                "[2] != [1] are not equal : roundtrip 1 (mongodb/assert.js#6)");
     }
 
     @Parameters(name = "{0}")
@@ -126,7 +136,7 @@ public class JSTest {
             @Override
             public boolean accept(File dir, String name) {
                 return !name.startsWith("_") && name.endsWith(".js")
-                        && (name.startsWith("numberint"))
+                        && (name.startsWith("set6"))
                         && !excludedTests.contains(name);
             }
 
@@ -151,6 +161,9 @@ public class JSTest {
 
     @BeforeClass
     public static void setUpClass() throws Exception {
+        // System.setProperty("DEBUG.MONGO", Boolean.TRUE.toString());
+        // System.setProperty("DB.TRACE", Boolean.TRUE.toString());
+
         testScope = MongoRuntime.createMongoScope();
         // set the exception handling behavior of the test runtime to mimic the
         // official mongo shell client
@@ -160,9 +173,6 @@ public class JSTest {
 
     @Test
     public void test() throws Exception {
-         System.setProperty("DEBUG.MONGO", Boolean.TRUE.toString());
-         System.setProperty("DB.TRACE", Boolean.TRUE.toString());
-
         System.out.println("*** Running " + jsTestFile.getName());
         try {
             MongoRuntime.call(new MongoScriptAction(testScope, "connect",

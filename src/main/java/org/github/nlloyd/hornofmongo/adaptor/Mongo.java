@@ -116,8 +116,8 @@ public class Mongo extends ScriptableMongoObject {
             Integer batchSize, Integer options) {
         Object result = null;
 
-        Object rawQuery = BSONizer.convertJStoBSON(query);
-        Object rawFields = BSONizer.convertJStoBSON(fields);
+        Object rawQuery = BSONizer.convertJStoBSON(query, false);
+        Object rawFields = BSONizer.convertJStoBSON(fields, false);
         DBObject bsonQuery = null;
         DBObject bsonFields = null;
         if (rawQuery instanceof DBObject)
@@ -156,7 +156,7 @@ public class Mongo extends ScriptableMongoObject {
     @SuppressWarnings({ "unchecked", "rawtypes" })
     @JSFunction
     public void insert(final String ns, Object obj, int options) {
-        Object rawObj = BSONizer.convertJStoBSON(obj);
+        Object rawObj = BSONizer.convertJStoBSON(obj, true);
         DBObject bsonObj = null;
         if (rawObj instanceof DBObject)
             bsonObj = (DBObject) rawObj;
@@ -191,8 +191,8 @@ public class Mongo extends ScriptableMongoObject {
     }
 
     @JSFunction
-    public void remove(final String ns, Object pattern) {
-        Object rawPattern = BSONizer.convertJStoBSON(pattern);
+    public void remove(final String ns, Object pattern, boolean justOne) {
+        Object rawPattern = BSONizer.convertJStoBSON(pattern, false);
         DBObject bsonPattern = null;
         if (rawPattern instanceof DBObject)
             bsonPattern = (DBObject) rawPattern;
@@ -212,8 +212,8 @@ public class Mongo extends ScriptableMongoObject {
     @JSFunction
     public void update(final String ns, Object query, Object obj,
             final Boolean upsert, final Boolean multi) {
-        Object rawQuery = BSONizer.convertJStoBSON(query);
-        Object rawObj = BSONizer.convertJStoBSON(obj);
+        Object rawQuery = BSONizer.convertJStoBSON(query, false);
+        Object rawObj = BSONizer.convertJStoBSON(obj, true);
         DBObject bsonQuery = null;
         DBObject bsonObj = null;
         if (rawQuery instanceof DBObject)
@@ -244,7 +244,7 @@ public class Mongo extends ScriptableMongoObject {
      */
     @JSFunction
     public void auth(final Object authObj) {
-        DBObject bsonAuth = (DBObject) BSONizer.convertJStoBSON(authObj);
+        DBObject bsonAuth = (DBObject) BSONizer.convertJStoBSON(authObj, false);
         DB db = innerMongo.getDB(bsonAuth.get("userSource").toString());
         // hackety hack hack hack... we need a fresh, unauthenticated Mongo
         // instance

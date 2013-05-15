@@ -34,7 +34,7 @@ import org.mozilla.javascript.annotations.JSFunction;
 public class BinData extends ScriptableMongoObject {
 	
 	private int type;
-	private byte[] data;
+	private String data;
 
 	/**
 	 * 
@@ -51,9 +51,10 @@ public class BinData extends ScriptableMongoObject {
 					"invalid BinData subtype -- range is 0..255 see bsonspec.org");
 		}
 		this.type = type;
-		data = Base64.decodeBase64(Context.toString(obj));
+		this.data = Context.toString(obj);
+		byte[] tmpData = Base64.decodeBase64(this.data);
 		put("type", this, type);
-		put("len", this, data.length);
+		put("len", this, tmpData.length);
 	}
 
 	/**
@@ -66,24 +67,25 @@ public class BinData extends ScriptableMongoObject {
 	
 	@JSFunction
 	public String toString() {
-		return "BinData(" + type + ",\"" + Base64.encodeBase64String(data) + "\")";
+		return "BinData(" + type + ",\"" + data + "\")";
 	}
 	
 	@JSFunction
 	public String base64() {
-		return Base64.encodeBase64String(data);
+		return data;
 	}
 	
 	@JSFunction
 	public String hex() {
-		return Hex.encodeHexString(data);
+	    String hexStr = Hex.encodeHexString(Base64.decodeBase64(this.data));
+		return hexStr;
 	}
 	
 	public int getType() {
 	    return type;
 	}
 	
-	public byte[] getData() {
+	public String getData() {
 	    return data;
 	}
 

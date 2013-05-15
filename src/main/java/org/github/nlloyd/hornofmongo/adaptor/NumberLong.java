@@ -21,6 +21,10 @@
  */
 package org.github.nlloyd.hornofmongo.adaptor;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
+
+import org.apache.commons.lang3.math.NumberUtils;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ScriptRuntime;
 import org.mozilla.javascript.Scriptable;
@@ -38,6 +42,9 @@ public class NumberLong extends ScriptableMongoObject {
 	 * 
 	 */
 	private static final long serialVersionUID = 7412902144340924262L;
+
+    public static final long JS_MAX_LONG = Long.valueOf(9007199254740992l);
+    public static final long JS_MIN_LONG = Long.valueOf(-9007199254740992l);
 	
 	private long realLong = 0;
 	
@@ -52,7 +59,10 @@ public class NumberLong extends ScriptableMongoObject {
             realLong = ((Number)obj).longValue();
         } else if(!(obj instanceof Undefined)) {
             String str = Context.toString(obj);
-            realLong = Double.valueOf(str).longValue();
+            Number num = NumberUtils.createNumber(str);
+            if((num instanceof BigInteger) || (num instanceof BigDecimal))
+                throw new NumberFormatException(String.format("Error: could not convert %s to NumberLong, too big.", str));
+            realLong = num.longValue();
         }
         put("floatApprox", this, realLong);
 	}
@@ -78,7 +88,13 @@ public class NumberLong extends ScriptableMongoObject {
 	@JSFunction
 	@Override
 	public String toString() {
-		return "NumberLong(" + realLong + ")";
+	    String toString;
+	    // reproduction of what v8_db.cpp has
+	    if((realLong <= Integer.MIN_VALUE) || (Integer.MAX_VALUE <= realLong))
+	        toString = "NumberLong(\"" + realLong + "\")";
+	    else
+	        toString = "NumberLong(" + realLong + ")";
+		return toString;
 	}
 	
     public void setRealLong(Long realLong) {
