@@ -1,6 +1,5 @@
 package org.github.nlloyd.hornofmongo.adaptor;
 
-import static org.github.nlloyd.hornofmongo.bson.HornOfMongoBSONEncoder.FACTORY;
 import static com.mongodb.CoreMongoApiWrapper.callInsert;
 
 import java.net.UnknownHostException;
@@ -10,6 +9,8 @@ import java.util.List;
 import org.github.nlloyd.hornofmongo.MongoRuntime;
 import org.github.nlloyd.hornofmongo.MongoScope;
 import org.github.nlloyd.hornofmongo.action.NewInstanceAction;
+import org.github.nlloyd.hornofmongo.bson.HornOfMongoBSONDecoder;
+import org.github.nlloyd.hornofmongo.bson.HornOfMongoBSONEncoder;
 import org.github.nlloyd.hornofmongo.util.BSONizer;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Scriptable;
@@ -63,7 +64,7 @@ public class Mongo extends ScriptableMongoObject {
 
     private void initMongoConnection() throws UnknownHostException {
         MongoClientOptions clientOptions = MongoClientOptions.builder()
-                .dbEncoderFactory(FACTORY).build();
+                .dbEncoderFactory(HornOfMongoBSONEncoder.FACTORY).build();
         this.innerMongo = new com.mongodb.MongoClient(this.host, clientOptions);
         if (mongoScope.useMongoShellWriteConcern())
             innerMongo.setWriteConcern(WriteConcern.UNACKNOWLEDGED);
@@ -130,7 +131,7 @@ public class Mongo extends ScriptableMongoObject {
         if ("$cmd".equals(collectionName)) {
             try {
                 CommandResult cmdResult = db.command(bsonQuery, options,
-                        FACTORY.create());
+                        HornOfMongoBSONEncoder.FACTORY.create());
                 handlePostCommandActions(db, bsonQuery);
                 Object jsCmdResult = BSONizer.convertBSONtoJS(mongoScope,
                         cmdResult);
@@ -141,7 +142,8 @@ public class Mongo extends ScriptableMongoObject {
             }
         } else {
             DBCollection collection = db.getCollection(collectionName);
-            collection.setDBEncoderFactory(FACTORY);
+            collection.setDBEncoderFactory(HornOfMongoBSONEncoder.FACTORY);
+            collection.setDBDecoderFactory(HornOfMongoBSONDecoder.FACTORY);
             DBCursor cursor = collection.find(bsonQuery, bsonFields).skip(skip)
                     .batchSize(batchSize).limit(limit).addOption(options);
             InternalCursor jsCursor = (InternalCursor) MongoRuntime
@@ -167,7 +169,8 @@ public class Mongo extends ScriptableMongoObject {
                     .substring(0, dbSeparatorIdx));
             String collectionName = ns.substring(dbSeparatorIdx + 1);
             DBCollection collection = db.getCollection(collectionName);
-            collection.setDBEncoderFactory(FACTORY);
+            collection.setDBEncoderFactory(HornOfMongoBSONEncoder.FACTORY);
+            collection.setDBDecoderFactory(HornOfMongoBSONDecoder.FACTORY);
             // unfortunately the Java driver does not expose the _allow_dot
             // argument in insert calls so we need to translate system.indexes
             // inserts into index creation calls through the java driver
@@ -200,7 +203,7 @@ public class Mongo extends ScriptableMongoObject {
         com.mongodb.DB db = innerMongo.getDB(ns.substring(0, ns.indexOf('.')));
         DBCollection collection = db
                 .getCollection(ns.substring(ns.indexOf('.') + 1));
-        collection.setDBEncoderFactory(FACTORY);
+        collection.setDBEncoderFactory(HornOfMongoBSONEncoder.FACTORY);
 
         try {
             collection.remove(bsonPattern);
@@ -227,7 +230,7 @@ public class Mongo extends ScriptableMongoObject {
         com.mongodb.DB db = innerMongo.getDB(ns.substring(0, ns.indexOf('.')));
         DBCollection collection = db
                 .getCollection(ns.substring(ns.indexOf('.') + 1));
-        collection.setDBEncoderFactory(FACTORY);
+        collection.setDBEncoderFactory(HornOfMongoBSONEncoder.FACTORY);
 
         try {
             collection.update(bsonQuery, bsonObj, upsertOp, multiOp);

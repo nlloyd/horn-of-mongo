@@ -75,8 +75,8 @@ public class JSTest {
      * fts_blogwild.js and fts_mix.js excluded for now due to invalid operator:
      * $** issue https://jira.mongodb.org/browse/JAVA-814
      * 
-     * remove_justone.js excluded until the mongo java driver supports that feature:
-     * https://jira.mongodb.org/browse/JAVA-759
+     * remove_justone.js excluded until the mongo java driver supports that
+     * feature: https://jira.mongodb.org/browse/JAVA-759
      * 
      */
     public static final List<String> excludedTests = Arrays
@@ -136,7 +136,6 @@ public class JSTest {
             @Override
             public boolean accept(File dir, String name) {
                 return !name.startsWith("_") && name.endsWith(".js")
-                        && (name.startsWith("ts1")) // ts1, type3
                         && !excludedTests.contains(name);
             }
 

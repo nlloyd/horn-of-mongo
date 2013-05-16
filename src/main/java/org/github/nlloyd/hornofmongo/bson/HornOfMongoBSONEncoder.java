@@ -46,14 +46,16 @@ public class HornOfMongoBSONEncoder extends DefaultDBEncoder {
             super._putObjectField(name, val);
         } catch (IllegalArgumentException e) {
             if (e.getMessage().startsWith("can't serialize ")) {
-                if(!(val instanceof Undefined))
-                    System.err.println(e.getMessage() + ", encoding as Undefined");
+                if (!(val instanceof Undefined))
+                    System.err.println(e.getMessage()
+                            + ", encoding as Undefined");
                 putUndefined(name);
             }
         }
     }
 
-    public static class HornOfMongoBSONEncoderFactory implements DBEncoderFactory {
+    public static class HornOfMongoBSONEncoderFactory implements
+            DBEncoderFactory {
         @Override
         public DBEncoder create() {
             return new HornOfMongoBSONEncoder();
