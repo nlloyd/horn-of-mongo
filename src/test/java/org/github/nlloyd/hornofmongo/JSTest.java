@@ -25,7 +25,6 @@ import static org.junit.Assert.assertEquals;
 
 import java.io.File;
 import java.io.FilenameFilter;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Hashtable;
@@ -154,7 +153,8 @@ public class JSTest {
 
     private static MongoScope testScope;
 
-    private static MongodWatchdog mongodWatchdog;
+    private static MongodExecutable mongodExec;
+    private static MongodProcess mongod;
 
     public JSTest(String jsTestFileName, File jsTestFile) {
         this.jsTestFile = jsTestFile;
@@ -162,29 +162,29 @@ public class JSTest {
 
     @BeforeClass
     public static void setUpClass() throws Exception {
-        File databaseDir = new File(System.getProperty("user.dir"), "mongodb");
+        File testClassesDir = new File(System.getProperty("user.dir"));
+        File databaseDir = new File(testClassesDir.getParent(), "mongodb");
         databaseDir.mkdirs();
+        File mongodLogFile = new File(databaseDir.getParent(), "mongodb.log");
         IRuntimeConfig runtimeConfig = new RuntimeConfigBuilder().defaults(Command.MongoD)
                 .commandLinePostProcessor(new ICommandLinePostProcessor() {
 
                     @Override
                     public List<String> process(Distribution arg0, List<String> arg1) {
+                        arg1.remove("-v");
+                        arg1.remove("--noprealloc");
                         arg1.add("--setParameter");
                         arg1.add("enableTestCommands=1");
                         return arg1;
                     }
 
-                }).processOutput(Loggers.none()).build();
+                }).processOutput(Loggers.file(mongodLogFile.getAbsolutePath(), "UTF8")).build();
 
         MongodConfig mongodConfig = new MongodConfig(new GenericVersion("2.4.3"), new Net("127.0.0.1", 27017,
                 Network.localhostIsIPv6()), new Storage(databaseDir.getAbsolutePath(), null, 0), new Timeout());
 
-        mongodWatchdog = new MongodWatchdog();
-        mongodWatchdog.mongodExec = MongodStarter.getInstance(runtimeConfig).prepare(mongodConfig);
-        new Thread(mongodWatchdog).start();
-        while(mongodWatchdog.mongod == null) {
-            Thread.sleep(1000);
-        }
+        mongodExec = MongodStarter.getInstance(runtimeConfig).prepare(mongodConfig);
+        mongod = mongodExec.start();
 
         // System.setProperty("DEBUG.MONGO", Boolean.TRUE.toString());
         // System.setProperty("DB.TRACE", Boolean.TRUE.toString());
@@ -198,8 +198,8 @@ public class JSTest {
 
     @AfterClass
     public static void tearDownClass() throws InterruptedException {
-        mongodWatchdog.stop = true;
-        Thread.sleep(1000);
+        mongod.stop();
+        mongodExec.stop();
     }
 
     @Test
@@ -215,8 +215,6 @@ public class JSTest {
         } catch (Exception e) {
             // a few tests throw expected exceptions
             verifyException(e);
-        } finally {
-            MongoRuntime.call(new MongoScriptAction(testScope, "cleanup", "db.dropDatabase();"));
         }
 
         testScope.cleanup();
@@ -231,30 +229,4 @@ public class JSTest {
         }
     }
     
-    protected static class MongodWatchdog implements Runnable {
-        
-        public boolean stop = false;
-        public MongodExecutable mongodExec;
-        private MongodProcess mongod;
-
-        @Override
-        public void run() {
-            try {
-                mongod = mongodExec.start();
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-            while(!stop) {
-                try {
-                    Thread.sleep(500);
-                } catch (InterruptedException e) {
-                    stop = true;
-                }
-            }
-            mongod.stop();
-            mongodExec.stop();
-        }
-        
-    }
-
 }
