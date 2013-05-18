@@ -58,14 +58,19 @@ public class Mongo extends ScriptableMongoObject {
         super();
         if (host instanceof Undefined)
             this.host = "localhost";
+        else if (host instanceof com.mongodb.Mongo)
+            this.innerMongo = (com.mongodb.Mongo) host;
         else
             this.host = host.toString();
     }
 
     private void initMongoConnection() throws UnknownHostException {
-        MongoClientOptions clientOptions = MongoClientOptions.builder()
-                .dbEncoderFactory(HornOfMongoBSONEncoder.FACTORY).build();
-        this.innerMongo = new com.mongodb.MongoClient(this.host, clientOptions);
+        if ((innerMongo == null) || !innerMongo.getConnector().isOpen()) {
+            MongoClientOptions clientOptions = MongoClientOptions.builder()
+                    .dbEncoderFactory(HornOfMongoBSONEncoder.FACTORY).build();
+            this.innerMongo = new com.mongodb.MongoClient(this.host,
+                    clientOptions);
+        }
         if (mongoScope.useMongoShellWriteConcern())
             innerMongo.setWriteConcern(WriteConcern.UNACKNOWLEDGED);
     }
@@ -175,14 +180,15 @@ public class Mongo extends ScriptableMongoObject {
             // argument in insert calls so we need to translate system.indexes
             // inserts into index creation calls through the java driver
             if (collectionName.endsWith("system.indexes")) {
-                callInsert(db.getCollection("system.indexes"), Arrays.asList(bsonObj), false);
+                callInsert(db.getCollection("system.indexes"),
+                        Arrays.asList(bsonObj), false);
             } else {
                 int oldOptions = collection.getOptions();
                 collection.setOptions(options);
 
                 List insertObj = null;
                 if (rawObj instanceof List)
-                    insertObj = (List)rawObj;
+                    insertObj = (List) rawObj;
                 else
                     insertObj = Arrays.asList(rawObj);
                 callInsert(collection, insertObj, false);

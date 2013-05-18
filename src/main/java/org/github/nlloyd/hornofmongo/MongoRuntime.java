@@ -21,8 +21,18 @@
  */
 package org.github.nlloyd.hornofmongo;
 
+import java.net.UnknownHostException;
+
+import org.apache.commons.lang3.StringUtils;
 import org.github.nlloyd.hornofmongo.action.MongoAction;
+import org.github.nlloyd.hornofmongo.action.NewInstanceAction;
+import org.github.nlloyd.hornofmongo.bson.HornOfMongoBSONEncoder;
 import org.mozilla.javascript.ContextFactory;
+import org.mozilla.javascript.ScriptableObject;
+
+import com.mongodb.MongoClient;
+import com.mongodb.MongoClientOptions;
+import com.mongodb.MongoClientURI;
 
 /**
  * Runtime class for the Horn of Mongo client library that initializes the
@@ -46,7 +56,34 @@ public class MongoRuntime {
         MongoScope mongoScope = (MongoScope) call(new MongoScope.InitMongoScopeAction());
         return mongoScope;
     }
-    
+
+    public static final MongoScope createMongoScope(
+            final MongoClientURI mongoClientURI, boolean useMongoShellWriteConcern,
+            boolean mimicShellExceptionBehavior) throws UnknownHostException {
+        if (StringUtils.isBlank(mongoClientURI.getDatabase()))
+            throw new IllegalArgumentException(
+                    "mongo client uri must have a database");
+        MongoScope mongoScope = createMongoScope();
+        mongoScope.setUseMongoShellWriteConcern(useMongoShellWriteConcern);
+        mongoScope.setMimicShellExceptionBehavior(mimicShellExceptionBehavior);
+        
+        MongoClientOptions.Builder clientOptionsBuilder = MongoClientOptions
+                .builder().dbEncoderFactory(HornOfMongoBSONEncoder.FACTORY);
+        MongoClientURI realClientURI = new MongoClientURI(
+                mongoClientURI.getURI(), clientOptionsBuilder);
+        MongoClient mongoConnection = new MongoClient(realClientURI);
+
+        Object mongo = MongoRuntime.call(new NewInstanceAction(mongoScope,
+                "Mongo", new Object[] { mongoConnection }));
+        Object db = MongoRuntime.call(new NewInstanceAction(mongoScope, "DB",
+                new Object[] { mongo, realClientURI.getDatabase() }));
+
+        ScriptableObject.defineProperty(mongoScope, "db", db,
+                ScriptableObject.EMPTY);
+
+        return mongoScope;
+    }
+
     /**
      * Convenience method to call the {@link MongoAction} using the global
      * {@link ContextFactory}. If the global {@link ContextFactory} has not
