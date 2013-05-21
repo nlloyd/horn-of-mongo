@@ -235,8 +235,8 @@ public class JSTest {
         try {
             // testScope = MongoRuntime.createMongoScope(new MongoClientURI(
             // "mongodb://localhost/test"), true, true);
-             MongoRuntime.call(new MongoScriptAction(testScope, "connect",
-             "db = connect('test',null,null);"));
+            MongoRuntime.call(new MongoScriptAction(testScope, "connect",
+                    "db = connect('test',null,null);"));
             MongoRuntime.call(new MongoScriptAction(testScope, jsTestFile));
         } catch (WrappedException e) {
             // a few tests throw expected exceptions, unwrap them if they are

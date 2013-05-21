@@ -25,13 +25,9 @@ import java.net.UnknownHostException;
 
 import org.apache.commons.lang3.StringUtils;
 import org.github.nlloyd.hornofmongo.action.MongoAction;
-import org.github.nlloyd.hornofmongo.action.NewInstanceAction;
-import org.github.nlloyd.hornofmongo.bson.HornOfMongoBSONEncoder;
+import org.github.nlloyd.hornofmongo.action.MongoScriptAction;
 import org.mozilla.javascript.ContextFactory;
-import org.mozilla.javascript.ScriptableObject;
 
-import com.mongodb.MongoClient;
-import com.mongodb.MongoClientOptions;
 import com.mongodb.MongoClientURI;
 
 /**
@@ -57,8 +53,21 @@ public class MongoRuntime {
         return mongoScope;
     }
 
+    /**
+     * Creates a newly initialized {@link MongoScope} instance with a connection
+     * to the specified mongodb instance/cluster. This will use
+     * {@link MongoRuntime#call(MongoAction)} to initialize the
+     * {@link MongoScope} instance, possibly resulting in the global
+     * {@link MongoContextFactory} being set.
+     * 
+     * After the scope is initialized a call via the mongo JS API to the
+     * "connect()" method will be made to initialize the global db instance.
+     * 
+     * @return
+     */
     public static final MongoScope createMongoScope(
-            final MongoClientURI mongoClientURI, boolean useMongoShellWriteConcern,
+            final MongoClientURI mongoClientURI,
+            boolean useMongoShellWriteConcern,
             boolean mimicShellExceptionBehavior) throws UnknownHostException {
         if (StringUtils.isBlank(mongoClientURI.getDatabase()))
             throw new IllegalArgumentException(
@@ -67,19 +76,18 @@ public class MongoRuntime {
         mongoScope.setUseMongoShellWriteConcern(useMongoShellWriteConcern);
         mongoScope.setMimicShellExceptionBehavior(mimicShellExceptionBehavior);
         
-        MongoClientOptions.Builder clientOptionsBuilder = MongoClientOptions
-                .builder().dbEncoderFactory(HornOfMongoBSONEncoder.FACTORY);
-        MongoClientURI realClientURI = new MongoClientURI(
-                mongoClientURI.getURI(), clientOptionsBuilder);
-        MongoClient mongoConnection = new MongoClient(realClientURI);
+        StringBuilder connectStrBuilder = new StringBuilder("db = connect('");
 
-        Object mongo = MongoRuntime.call(new NewInstanceAction(mongoScope,
-                "Mongo", new Object[] { mongoConnection }));
-        Object db = MongoRuntime.call(new NewInstanceAction(mongoScope, "DB",
-                new Object[] { mongo, realClientURI.getDatabase() }));
-
-        ScriptableObject.defineProperty(mongoScope, "db", db,
-                ScriptableObject.EMPTY);
+        if ((mongoClientURI.getHosts().size() == 1)
+                && (mongoClientURI.getHosts().get(0).equals("localhost") || mongoClientURI
+                        .getHosts().get(0).equals("localhost:27017")))
+            connectStrBuilder.append(mongoClientURI.getDatabase());
+        else
+            connectStrBuilder.append(mongoClientURI.getURI());
+        
+        connectStrBuilder.append("', null, null);");
+        
+        call(new MongoScriptAction(mongoScope, "connect", connectStrBuilder.toString()));
 
         return mongoScope;
     }

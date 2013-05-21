@@ -3,7 +3,9 @@ package org.github.nlloyd.hornofmongo.adaptor;
 import static com.mongodb.CoreMongoApiWrapper.callInsert;
 
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import org.github.nlloyd.hornofmongo.MongoRuntime;
@@ -26,7 +28,9 @@ import com.mongodb.DBCollection;
 import com.mongodb.DBCursor;
 import com.mongodb.DBObject;
 import com.mongodb.MongoClientOptions;
+import com.mongodb.MongoClientURI;
 import com.mongodb.MongoException;
+import com.mongodb.ServerAddress;
 import com.mongodb.WriteConcern;
 
 /**
@@ -43,32 +47,58 @@ public class Mongo extends ScriptableMongoObject {
 	 */
     private static final long serialVersionUID = 6810309240609504412L;
 
+    /**
+     * Copy of a private static final variable from {@link MongoClientURI}
+     */
+    public static final String MONGO_CLIENT_URI_PREFIX = "mongodb://";
+
     protected com.mongodb.Mongo innerMongo;
 
-    protected String host;
+    protected List<ServerAddress> hosts;
 
     @JSConstructor
     public Mongo() throws UnknownHostException {
         super();
-        this.host = "localhost";
+        this.hosts = Collections.singletonList(new ServerAddress("localhost",
+                ServerAddress.defaultPort()));
     }
 
+    @SuppressWarnings("unchecked")
     @JSConstructor
     public Mongo(final Object host) throws UnknownHostException {
         super();
         if (host instanceof Undefined)
-            this.host = "localhost";
+            this.hosts = Collections.singletonList(new ServerAddress(
+                    "localhost", ServerAddress.defaultPort()));
         else if (host instanceof com.mongodb.Mongo)
             this.innerMongo = (com.mongodb.Mongo) host;
-        else
-            this.host = host.toString();
+        else if (host instanceof List<?>)
+            // TODO check if we get a list of ServerAddresses or something else
+            this.hosts = (List<ServerAddress>) host;
+        else {
+            String hostsString = Context.toString(host);
+            if (hostsString.startsWith(MONGO_CLIENT_URI_PREFIX))
+                hostsString = hostsString.substring(MONGO_CLIENT_URI_PREFIX
+                        .length());
+            String[] hostStrings = hostsString.split(",");
+            this.hosts = new ArrayList<ServerAddress>(hostStrings.length);
+            for (String hostString : hostStrings) {
+                if (hostString.charAt(':') > -1) {
+                    String[] hostBits = hostString.split(":");
+                    this.hosts.add(new ServerAddress(hostBits[0], Integer
+                            .valueOf(hostBits[1])));
+                } else
+                    this.hosts.add(new ServerAddress(hostString, ServerAddress
+                            .defaultPort()));
+            }
+        }
     }
 
     private void initMongoConnection() throws UnknownHostException {
         if ((innerMongo == null) || !innerMongo.getConnector().isOpen()) {
             MongoClientOptions clientOptions = MongoClientOptions.builder()
                     .dbEncoderFactory(HornOfMongoBSONEncoder.FACTORY).build();
-            this.innerMongo = new com.mongodb.MongoClient(this.host,
+            this.innerMongo = new com.mongodb.MongoClient(this.hosts,
                     clientOptions);
         }
         if (mongoScope.useMongoShellWriteConcern())
