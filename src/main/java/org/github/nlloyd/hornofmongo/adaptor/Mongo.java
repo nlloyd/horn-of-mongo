@@ -56,11 +56,8 @@ public class Mongo extends ScriptableMongoObject {
 
     protected List<ServerAddress> hosts;
 
-    @JSConstructor
     public Mongo() throws UnknownHostException {
         super();
-        this.hosts = Collections.singletonList(new ServerAddress("localhost",
-                ServerAddress.defaultPort()));
     }
 
     @SuppressWarnings("unchecked")
