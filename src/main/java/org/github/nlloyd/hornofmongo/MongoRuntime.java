@@ -94,16 +94,12 @@ public class MongoRuntime {
 
     /**
      * Convenience method to call the {@link MongoAction} using the global
-     * {@link ContextFactory}. If the global {@link ContextFactory} has not
-     * explicitly been set yet then this method will set an instance of
-     * {@link MongoContextFactory} as the global {@link ContextFactory}.
+     * {@link ContextFactory}.
      * 
      * @param mongoAction
      * @return
      */
     public static final Object call(MongoAction mongoAction) {
-        if (!ContextFactory.hasExplicitGlobal())
-            ContextFactory.initGlobal(new MongoContextFactory());
         return ContextFactory.getGlobal().call(mongoAction);
     }
 

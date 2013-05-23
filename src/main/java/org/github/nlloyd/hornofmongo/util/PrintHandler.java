@@ -19,33 +19,21 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-package org.github.nlloyd.hornofmongo;
-
-import static org.mozilla.javascript.Context.FEATURE_DYNAMIC_SCOPE;
-import static org.mozilla.javascript.Context.FEATURE_LOCATION_INFORMATION_IN_ERROR;
+package org.github.nlloyd.hornofmongo.util;
 
 import org.mozilla.javascript.Context;
-import org.mozilla.javascript.ContextFactory;
+import org.mozilla.javascript.Scriptable;
 
 /**
+ * Interface for implementing the JavaScript print(..) method. Default handling
+ * of print(..) in Rhino is to send all output to {@link System#out}, or to a
+ * specific OutputStream. This interface allows a more convenient way to
+ * redirect print(..) data, for instance to a logging framework.
+ * 
  * @author nlloyd
  * 
  */
-public class MongoContextFactory extends ContextFactory {
+public interface PrintHandler {
 
-    /**
-     * Override {@link #hasFeature(Context, int)}
-     * 
-     * Enables {@link Context#FEATURE_WARNING_AS_ERROR}.
-     */
-    @Override
-    public boolean hasFeature(Context cx, int featureIndex) {
-        switch (featureIndex) {
-        case FEATURE_LOCATION_INFORMATION_IN_ERROR:
-        case FEATURE_DYNAMIC_SCOPE:
-            return true;
-        }
-        return super.hasFeature(cx, featureIndex);
-    }
-
+    public void doPrint(Context cx, Scriptable s, Object[] args);
 }

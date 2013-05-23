@@ -56,6 +56,7 @@ import org.github.nlloyd.hornofmongo.adaptor.ObjectId;
 import org.github.nlloyd.hornofmongo.adaptor.Timestamp;
 import org.github.nlloyd.hornofmongo.exception.MongoScopeException;
 import org.github.nlloyd.hornofmongo.util.BSONizer;
+import org.github.nlloyd.hornofmongo.util.PrintHandler;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Function;
 import org.mozilla.javascript.JavaScriptException;
@@ -99,6 +100,8 @@ public class MongoScope extends Global {
             "mongodb/db.js", "mongodb/mongo.js", "mongodb/mr.js",
             "mongodb/query.js", "mongodb/collection.js",
             "mongodb/servers_misc.js" };
+
+    private PrintHandler printHandler;
 
     /**
      * If true then some {@link MongoException} will be caught and the messages
@@ -182,6 +185,21 @@ public class MongoScope extends Global {
         this.hasMongoPrototype = hasMongoPrototype;
     }
 
+    /**
+     * @return the printHandler
+     */
+    public PrintHandler getPrintHandler() {
+        return printHandler;
+    }
+
+    /**
+     * @param printHandler
+     *            the printHandler to set
+     */
+    public void setPrintHandler(PrintHandler printHandler) {
+        this.printHandler = printHandler;
+    }
+
     public void addMongoConnection(Mongo mongoConnection) {
         mongoConnections.add(mongoConnection);
     }
@@ -207,10 +225,8 @@ public class MongoScope extends Global {
             super.init(context);
         }
 
-        // context.setOptimizationLevel(-1);
-
         String[] names = { "sleep", "hex_md5", "_isWindows", "_srand", "_rand",
-                "UUID", "MD5", "HexData" };
+                "UUID", "MD5", "HexData", "print" };
         defineFunctionProperties(names, this.getClass(),
                 ScriptableObject.DONTENUM);
         ScriptableObject objectPrototype = (ScriptableObject) ScriptableObject
@@ -262,7 +278,6 @@ public class MongoScope extends Global {
 
     public void handleMongoException(MongoException me) {
         if (this.isMimicShellExceptionBehavior()) {
-            System.out.println(me.getCode() + " -> " + me.getMessage());
             // check error codes that do NOT result in an exception
             switch (me.getCode()) {
             case 10088: // cannot index parallel arrays [b] [d]
@@ -292,7 +307,8 @@ public class MongoScope extends Global {
                         // numeric field names in embedded elements in
                         // an array)
             case 12505: // add index fails, too many indexes
-                System.out.println(me.getMessage());
+                MongoScope.print(Context.getCurrentContext(), this,
+                        new Object[] { me.getMessage() }, null);
                 return;
             default:
                 throw me;
@@ -361,7 +377,8 @@ public class MongoScope extends Global {
             Object[] args, Function funObj) {
         String str = hexToBase64(Context.toString(args[0]));
         BinData uuid = (BinData) MongoRuntime.call(new NewInstanceAction(
-                (MongoScope) thisObj, "BinData", new Object[] { BSON.B_UUID, str }));
+                (MongoScope) thisObj, "BinData", new Object[] { BSON.B_UUID,
+                        str }));
         return uuid;
     }
 
@@ -382,15 +399,31 @@ public class MongoScope extends Global {
                 (MongoScope) thisObj, "BinData", new Object[] { type, str }));
         return md5;
     }
-    
+
     private static final String hexToBase64(final String hex) {
         String base64 = null;
         try {
-            base64 = Base64.encodeBase64String(Hex.decodeHex(hex.toCharArray()));
+            base64 = Base64
+                    .encodeBase64String(Hex.decodeHex(hex.toCharArray()));
         } catch (DecoderException e) {
             Context.throwAsScriptRuntimeEx(e);
         }
         return base64;
+    }
+
+    public static Object print(Context cx, Scriptable thisObj, Object[] args,
+            Function funObj) {
+        if (thisObj instanceof MongoScope) {
+            MongoScope mongoScope = (MongoScope) thisObj;
+            if (mongoScope.getPrintHandler() != null)
+                mongoScope.getPrintHandler().doPrint(cx, thisObj, args);
+            else
+                Global.print(cx, thisObj, args, funObj);
+        } else {
+            Global.print(cx, thisObj, args, funObj);
+        }
+
+        return Context.getUndefinedValue();
     }
 
     public static final class InitMongoScopeAction extends MongoAction {
