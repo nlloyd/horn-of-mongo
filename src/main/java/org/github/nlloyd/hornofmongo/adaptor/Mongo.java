@@ -117,15 +117,13 @@ public class Mongo extends ScriptableMongoObject {
     public void setParentScope(Scriptable m) {
         super.setParentScope(m);
         // don't create a client connection for the prototype
-        if (mongoScope.hasMongoPrototype()) {
+        if (!mongoScope.getChildPrototypeRegistry().containsValue(this)) {
             try {
                 initMongoConnection();
                 mongoScope.addMongoConnection(this);
             } catch (UnknownHostException e) {
                 Context.throwAsScriptRuntimeEx(e);
             }
-        } else {
-            mongoScope.setHasMongoPrototype(true);
         }
     }
 

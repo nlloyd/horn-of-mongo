@@ -21,9 +21,6 @@
  */
 package org.github.nlloyd.hornofmongo.adaptor;
 
-import java.util.Hashtable;
-import java.util.Map;
-
 import org.github.nlloyd.hornofmongo.MongoScope;
 import org.github.nlloyd.hornofmongo.exception.MongoRuntimeException;
 import org.mozilla.javascript.Scriptable;
@@ -40,8 +37,6 @@ public abstract class ScriptableMongoObject extends ScriptableObject {
      */
     private static final long serialVersionUID = 839135097878723000L;
 
-    private static Map<Class<? extends ScriptableMongoObject>, Scriptable> childPrototypeRegistry = new Hashtable<Class<? extends ScriptableMongoObject>, Scriptable>();
-
     /**
      * Reference to the owning {@link MongoScope} to check for certain
      * scope-level behavior flags.
@@ -50,19 +45,22 @@ public abstract class ScriptableMongoObject extends ScriptableObject {
 
     public ScriptableMongoObject() {
         super();
-        if (!childPrototypeRegistry.containsKey(this.getClass()))
-            childPrototypeRegistry.put(this.getClass(), this);
     }
 
-    /**
-     * @see org.mozilla.javascript.ScriptableObject#getPrototype()
-     */
-    @Override
-    public Scriptable getPrototype() {
-        if (super.getPrototype() == null)
-            setPrototype(childPrototypeRegistry.get(this.getClass()));
-        return super.getPrototype();
-    }
+//    /**
+//     * @see org.mozilla.javascript.ScriptableObject#getPrototype()
+//     */
+//    @Override
+//    public Scriptable getPrototype() {
+//        if (super.getPrototype() == null) {
+//            if ((mongoScope != null)
+//                    && (mongoScope.getChildPrototypeRegistry().containsKey(this
+//                            .getClass())))
+//                setPrototype(mongoScope.getChildPrototypeRegistry().get(
+//                        this.getClass()));
+//        }
+//        return super.getPrototype();
+//    }
 
     /**
      * Overrides {@link ScriptableObject}
@@ -71,9 +69,13 @@ public abstract class ScriptableMongoObject extends ScriptableObject {
     public void setParentScope(Scriptable m) {
         super.setParentScope(m);
         Scriptable topScope = ScriptableObject.getTopLevelScope(m);
-        if (topScope instanceof MongoScope)
+        if (topScope instanceof MongoScope) {
             mongoScope = (MongoScope) topScope;
-        else
+            if (!mongoScope.getChildPrototypeRegistry().containsKey(
+                    this.getClass()))
+                mongoScope.getChildPrototypeRegistry().put(this.getClass(),
+                        this);
+        } else
             throw new MongoRuntimeException(this.getClass().getName()
                     + " was not created within a MongoScope!");
     }

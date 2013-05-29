@@ -30,6 +30,8 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.lang.reflect.InvocationTargetException;
 import java.util.HashSet;
+import java.util.Hashtable;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
@@ -53,6 +55,7 @@ import org.github.nlloyd.hornofmongo.adaptor.Mongo;
 import org.github.nlloyd.hornofmongo.adaptor.NumberInt;
 import org.github.nlloyd.hornofmongo.adaptor.NumberLong;
 import org.github.nlloyd.hornofmongo.adaptor.ObjectId;
+import org.github.nlloyd.hornofmongo.adaptor.ScriptableMongoObject;
 import org.github.nlloyd.hornofmongo.adaptor.Timestamp;
 import org.github.nlloyd.hornofmongo.exception.MongoScopeException;
 import org.github.nlloyd.hornofmongo.util.BSONizer;
@@ -104,6 +107,13 @@ public class MongoScope extends Global {
     private PrintHandler printHandler;
 
     /**
+     * Adaptor class prototype registry.  For some reason this is required otherwise we get several test failures.
+     * I suspect there is a bug in Rhino around prototype handling: TODO investigate further.
+     *
+     */
+    private Map<Class<? extends ScriptableMongoObject>, Scriptable> childPrototypeRegistry = new Hashtable<Class<? extends ScriptableMongoObject>, Scriptable>();
+
+    /**
      * If true then some {@link MongoException} will be caught and the messages
      * will be printed to stdout depending on behavior of the official mongodb
      * client shell. If false then the exceptions will be rethrown.
@@ -126,7 +136,6 @@ public class MongoScope extends Global {
     private boolean useMongoShellWriteConcern = false;
 
     private Set<Mongo> mongoConnections = synchronizedSet(new HashSet<Mongo>());
-    private boolean hasMongoPrototype = false;
 
     public MongoScope() {
         super();
@@ -171,25 +180,17 @@ public class MongoScope extends Global {
     }
 
     /**
-     * @return the hasMongoPrototype
-     */
-    public boolean hasMongoPrototype() {
-        return hasMongoPrototype;
-    }
-
-    /**
-     * @param hasMongoPrototype
-     *            the hasMongoPrototype to set
-     */
-    public void setHasMongoPrototype(boolean hasMongoPrototype) {
-        this.hasMongoPrototype = hasMongoPrototype;
-    }
-
-    /**
      * @return the printHandler
      */
     public PrintHandler getPrintHandler() {
         return printHandler;
+    }
+
+    /**
+     * @return the childPrototypeRegistry
+     */
+    public Map<Class<? extends ScriptableMongoObject>, Scriptable> getChildPrototypeRegistry() {
+        return childPrototypeRegistry;
     }
 
     /**
