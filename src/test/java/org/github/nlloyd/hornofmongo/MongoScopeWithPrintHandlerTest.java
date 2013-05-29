@@ -21,13 +21,20 @@
  */
 package org.github.nlloyd.hornofmongo;
 
+import static org.easymock.EasyMock.capture;
+import static org.easymock.EasyMock.createStrictMock;
+import static org.easymock.EasyMock.eq;
+import static org.easymock.EasyMock.expectLastCall;
+import static org.easymock.EasyMock.isA;
+import static org.easymock.EasyMock.replay;
+import static org.easymock.EasyMock.verify;
 import static org.junit.Assert.assertEquals;
 
+import org.easymock.Capture;
 import org.github.nlloyd.hornofmongo.action.MongoScriptAction;
 import org.github.nlloyd.hornofmongo.util.PrintHandler;
 import org.junit.Test;
 import org.mozilla.javascript.Context;
-import org.mozilla.javascript.Scriptable;
 
 /**
  * @author nlloyd
@@ -38,40 +45,38 @@ public class MongoScopeWithPrintHandlerTest {
     @Test
     public void test() {
         MongoScope testScope = MongoRuntime.createMongoScope();
-        CapturingPrintHandler capturingPrintHandler = new CapturingPrintHandler();
-        testScope.setPrintHandler(capturingPrintHandler);
+        PrintHandler mockPrintHandler = createStrictMock(PrintHandler.class);
+        testScope.setPrintHandler(mockPrintHandler);
 
         final String expected1 = "ohai!";
         final String expected2 = "kbye!";
 
+        Capture<Object[]> args1Capture = new Capture<Object[]>();
+        Capture<Object[]> args2Capture = new Capture<Object[]>();
+
+        mockPrintHandler.doPrint(isA(Context.class), eq(testScope),
+                capture(args1Capture));
+        expectLastCall().once();
+        mockPrintHandler.doPrint(isA(Context.class), eq(testScope),
+                capture(args2Capture));
+        expectLastCall().once();
+        replay(mockPrintHandler);
+
         MongoRuntime.call(new MongoScriptAction(testScope, String.format(
                 "print('%s')", expected1)));
-        assertEquals(expected1, capturingPrintHandler.lastMessage);
-
-        MongoRuntime.call(new MongoScriptAction(testScope, String.format(
-                "print('%s')", expected2)));
-        assertEquals(expected2, capturingPrintHandler.lastMessage);
-
         MongoRuntime.call(new MongoScriptAction(testScope, String.format(
                 "print('%s','%s')", expected1, expected2)));
-        assertEquals(expected1 + " " + expected2,
-                capturingPrintHandler.lastMessage);
-    }
 
-    private static final class CapturingPrintHandler implements PrintHandler {
-        public String lastMessage;
-
-        @Override
-        public void doPrint(Context cx, Scriptable s, Object[] args) {
-            StringBuilder sb = new StringBuilder();
-            for (Object arg : args) {
-                if (sb.length() > 0)
-                    sb.append(' ');
-                sb.append(Context.toString(arg));
-            }
-            lastMessage = sb.toString();
-        }
-
+        verify(mockPrintHandler);
+        
+        Object[] args1 = args1Capture.getValue();
+        Object[] args2 = args2Capture.getValue();
+        
+        assertEquals(1, args1.length);
+        assertEquals(2, args2.length);
+        assertEquals(expected1, args1[0]);
+        assertEquals(expected1, args2[0]);
+        assertEquals(expected2, args2[1]);
     }
 
 }
