@@ -8,7 +8,7 @@
         <version>7</version>
     </parent>
 
-    <groupId>org.github.nlloyd</groupId>
+    <groupId>com.github.nlloyd</groupId>
     <artifactId>horn-of-mongo</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
