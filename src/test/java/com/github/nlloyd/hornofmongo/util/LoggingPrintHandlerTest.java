@@ -19,7 +19,7 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-package org.github.nlloyd.hornofmongo.util;
+package com.github.nlloyd.hornofmongo.util;
 
 import static org.easymock.EasyMock.createStrictMock;
 import static org.easymock.EasyMock.expectLastCall;
@@ -27,11 +27,13 @@ import static org.easymock.EasyMock.replay;
 import static org.easymock.EasyMock.verify;
 import static org.junit.Assert.assertEquals;
 
-import org.github.nlloyd.hornofmongo.util.LoggingPrintHandler.Level;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.github.nlloyd.hornofmongo.util.LoggingPrintHandler;
+import com.github.nlloyd.hornofmongo.util.LoggingPrintHandler.Level;
 
 /**
  * @author nlloyd

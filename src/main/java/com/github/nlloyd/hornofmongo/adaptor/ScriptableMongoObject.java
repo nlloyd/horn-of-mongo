@@ -21,9 +21,6 @@
  */
 package com.github.nlloyd.hornofmongo.adaptor;
 
-import java.util.Hashtable;
-import java.util.Map;
-
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
 

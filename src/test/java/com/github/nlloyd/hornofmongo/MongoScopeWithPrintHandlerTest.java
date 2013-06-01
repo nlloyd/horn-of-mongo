@@ -19,7 +19,7 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-package org.github.nlloyd.hornofmongo;
+package com.github.nlloyd.hornofmongo;
 
 import static org.easymock.EasyMock.capture;
 import static org.easymock.EasyMock.createStrictMock;
@@ -31,10 +31,11 @@ import static org.easymock.EasyMock.verify;
 import static org.junit.Assert.assertEquals;
 
 import org.easymock.Capture;
-import org.github.nlloyd.hornofmongo.action.MongoScriptAction;
-import org.github.nlloyd.hornofmongo.util.PrintHandler;
 import org.junit.Test;
 import org.mozilla.javascript.Context;
+
+import com.github.nlloyd.hornofmongo.action.MongoScriptAction;
+import com.github.nlloyd.hornofmongo.util.PrintHandler;
 
 /**
  * @author nlloyd

@@ -19,7 +19,7 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-package org.github.nlloyd.hornofmongo.util;
+package com.github.nlloyd.hornofmongo.util;
 
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Scriptable;

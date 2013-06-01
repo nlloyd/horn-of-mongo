@@ -19,7 +19,7 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-package org.github.nlloyd.hornofmongo.util;
+package com.github.nlloyd.hornofmongo.util;
 
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Scriptable;
@@ -72,7 +72,7 @@ public class LoggingPrintHandler implements PrintHandler {
     }
 
     /**
-     * @see org.github.nlloyd.hornofmongo.util.PrintHandler#doPrint(org.mozilla.javascript.Context, org.mozilla.javascript.Scriptable, java.lang.Object[])
+     * @see com.github.nlloyd.hornofmongo.util.PrintHandler#doPrint(org.mozilla.javascript.Context, org.mozilla.javascript.Scriptable, java.lang.Object[])
      */
     @Override
     public void doPrint(Context cx, Scriptable s, Object[] args) {
