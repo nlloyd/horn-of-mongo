@@ -1,6 +1,7 @@
 package com.mongodb;
 
-import static org.github.nlloyd.hornofmongo.bson.HornOfMongoBSONEncoder.FACTORY;
+import static com.github.nlloyd.hornofmongo.bson.HornOfMongoBSONEncoder.FACTORY;
+
 import java.util.List;
 
 public class CoreMongoApiWrapper extends DBApiLayer {
