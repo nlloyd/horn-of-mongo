@@ -120,7 +120,7 @@ public class MongoScriptAction extends MongoAction {
         // one-liner without a semi-colon line terminator
         boolean wasCmd = false;
         if (isOneLine(script)) {
-            script.trim();
+            script = script.trim();
             String cmd = script;
             if (cmd.indexOf(' ') > 0)
                 cmd = script.substring(0, cmd.indexOf(' '));
@@ -131,7 +131,7 @@ public class MongoScriptAction extends MongoAction {
                 cmdCheck.append("\"];");
                 cx.evaluateString(mongoScope, cmdCheck.toString(),
                         "(shellhelp1)", 0, null);
-                if (Context.toBoolean(ScriptableObject.getTopScopeValue(
+                if (Context.toBoolean(ScriptableObject.getProperty(
                         mongoScope, "__iscmd__"))) {
                     StringBuilder cmdScript = new StringBuilder();
                     cmdScript.append("shellHelper( \"");
@@ -139,9 +139,12 @@ public class MongoScriptAction extends MongoAction {
                     cmdScript.append("\" , \"");
                     cmdScript.append(script.substring(cmd.length()));
                     cmdScript.append("\");");
+                    try {
                     cx.evaluateString(mongoScope, cmdScript.toString(),
                             "(shellhelp2)", 0, null);
-                    wasCmd = true;
+                    } finally {
+                        wasCmd = true;
+                    }
                 }
             }
         }
@@ -184,7 +187,8 @@ public class MongoScriptAction extends MongoAction {
             }
         } catch (IOException e) {
         }
-        return lnr.getLineNumber() == 1;
+        // 0 lines just means no line terminator in the string
+        return lnr.getLineNumber() <= 1;
     }
 
 }

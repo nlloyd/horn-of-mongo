@@ -149,9 +149,7 @@ public class JSTest {
         if (cwd == null)
             cwd = new File(System.getProperty("user.dir"), "jstests");
 
-        System.out.println("searching for *.js test files in path: "
-                + cwd.toString());
-        File[] jsFiles = cwd.listFiles(new FilenameFilter() {
+        final FilenameFilter jsFilter = new FilenameFilter() {
 
             @Override
             public boolean accept(File dir, String name) {
@@ -159,12 +157,24 @@ public class JSTest {
                         && !excludedTests.contains(name);
             }
 
-        });
+        };
+        
+        System.out.println("searching for official mongodb *.js test files in path: "
+                + cwd.toString());
+        File[] jsFiles = cwd.listFiles(jsFilter);
 
         List<Object[]> testScripts = new ArrayList<Object[]>(jsFiles.length);
         // fileName is the first argument for naming the tests, otherwise it is
         // ignored
         for (File jsFile : jsFiles)
+            testScripts.add(new Object[] { jsFile.getName(), jsFile });
+        
+        File rootJsTestDir = cwd.getParentFile();
+        System.out.println("searching for horn-of-mongo *.js test files in path: " 
+                + rootJsTestDir.toString());
+        File[] moreJsFiles = rootJsTestDir.listFiles(jsFilter);
+        
+        for(File jsFile : moreJsFiles)
             testScripts.add(new Object[] { jsFile.getName(), jsFile });
 
         return testScripts;
