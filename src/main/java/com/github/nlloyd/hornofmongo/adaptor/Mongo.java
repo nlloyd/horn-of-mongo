@@ -80,7 +80,7 @@ public class Mongo extends ScriptableMongoObject {
             String[] hostStrings = hostsString.split(",");
             this.hosts = new ArrayList<ServerAddress>(hostStrings.length);
             for (String hostString : hostStrings) {
-                if (hostString.charAt(':') > -1) {
+                if (hostString.indexOf(':') > -1) {
                     String[] hostBits = hostString.split(":");
                     this.hosts.add(new ServerAddress(hostBits[0], Integer
                             .valueOf(hostBits[1])));
