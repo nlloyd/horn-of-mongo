@@ -25,12 +25,19 @@ import static java.util.Collections.synchronizedSet;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.lang.reflect.InvocationTargetException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Hashtable;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
@@ -38,6 +45,7 @@ import java.util.Set;
 import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Hex;
+import org.apache.commons.io.FileUtils;
 import org.bson.BSON;
 import org.bson.io.BasicOutputBuffer;
 import org.mozilla.javascript.Context;
@@ -45,6 +53,7 @@ import org.mozilla.javascript.Function;
 import org.mozilla.javascript.JavaScriptException;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
+import org.mozilla.javascript.Undefined;
 import org.mozilla.javascript.ast.Scope;
 import org.mozilla.javascript.tools.shell.Global;
 
@@ -66,8 +75,10 @@ import com.github.nlloyd.hornofmongo.adaptor.ObjectId;
 import com.github.nlloyd.hornofmongo.adaptor.ScriptableMongoObject;
 import com.github.nlloyd.hornofmongo.adaptor.Timestamp;
 import com.github.nlloyd.hornofmongo.exception.MongoScopeException;
+import com.github.nlloyd.hornofmongo.exception.MongoScriptException;
 import com.github.nlloyd.hornofmongo.util.BSONizer;
 import com.github.nlloyd.hornofmongo.util.PrintHandler;
+import com.mongodb.BasicDBObjectBuilder;
 import com.mongodb.DBEncoder;
 import com.mongodb.DBObject;
 import com.mongodb.DefaultDBEncoder;
@@ -102,14 +113,16 @@ public class MongoScope extends Global {
             "mongodb/types.js", "mongodb/utils.js", "mongodb/utils_sh.js",
             "mongodb/db.js", "mongodb/mongo.js", "mongodb/mr.js",
             "mongodb/query.js", "mongodb/collection.js",
-            "mongodb/servers_misc.js" };
+            "mongodb/servers_misc.js", "mongodb/servers.js",
+            "mongodb/shardingtest.js" };
 
     private PrintHandler printHandler;
 
     /**
-     * Adaptor class prototype registry.  For some reason this is required otherwise we get several test failures.
-     * I suspect there is a bug in Rhino around prototype handling: TODO investigate further.
-     *
+     * Adaptor class prototype registry. For some reason this is required
+     * otherwise we get several test failures. I suspect there is a bug in Rhino
+     * around prototype handling: TODO investigate further.
+     * 
      */
     private Map<Class<? extends ScriptableMongoObject>, Scriptable> childPrototypeRegistry = new Hashtable<Class<? extends ScriptableMongoObject>, Scriptable>();
 
@@ -136,6 +149,11 @@ public class MongoScope extends Global {
     private boolean useMongoShellWriteConcern = false;
 
     private Set<Mongo> mongoConnections = synchronizedSet(new HashSet<Mongo>());
+
+    /**
+     * Stored current working directory for handling filesystem operations.
+     */
+    private File cwd = new File(".");
 
     public MongoScope() {
         super();
@@ -201,6 +219,21 @@ public class MongoScope extends Global {
         this.printHandler = printHandler;
     }
 
+    /**
+     * @return the cwd
+     */
+    public File getCwd() {
+        return cwd;
+    }
+
+    /**
+     * @param cwd
+     *            the cwd to set
+     */
+    public void setCwd(File cwd) {
+        this.cwd = cwd;
+    }
+
     public void addMongoConnection(Mongo mongoConnection) {
         mongoConnections.add(mongoConnection);
     }
@@ -227,7 +260,9 @@ public class MongoScope extends Global {
         }
 
         String[] names = { "sleep", "hex_md5", "_isWindows", "_srand", "_rand",
-                "UUID", "MD5", "HexData", "print" };
+                "UUID", "MD5", "HexData", "print", "ls", "cd", "mkdir", "pwd",
+                "listFiles", "hostname", "cat", "removeFile", "md5sumFile",
+                "fuzzFile", "run", "runProgram", "getMemInfo" };
         defineFunctionProperties(names, this.getClass(),
                 ScriptableObject.DONTENUM);
         ScriptableObject objectPrototype = (ScriptableObject) ScriptableObject
@@ -326,11 +361,6 @@ public class MongoScope extends Global {
     // return MongoScope.print(cx, thisObj, new Object[]{}, funObj);
     // }
 
-    public static void sleep(Context cx, Scriptable thisObj, Object[] args,
-            Function funObj) throws NumberFormatException, InterruptedException {
-        Thread.sleep(Double.valueOf(args[0].toString()).longValue());
-    }
-
     public static String hex_md5(Context cx, Scriptable thisObj, Object[] args,
             Function funObj) {
         // just like mongo native_hex_md5 call, only expects a single string
@@ -376,7 +406,14 @@ public class MongoScope extends Global {
 
     public static final BinData UUID(Context cx, Scriptable thisObj,
             Object[] args, Function funObj) {
-        String str = hexToBase64(Context.toString(args[0]));
+        if (args.length != 1)
+            Context.throwAsScriptRuntimeEx(new MongoScriptException(
+                    "UUID needs 1 argument"));
+        String uuidHex = Context.toString(args[0]);
+        if (uuidHex.length() != 32)
+            Context.throwAsScriptRuntimeEx(new MongoScriptException(
+                    "UUID string must have 32 characters"));
+        String str = hexToBase64(uuidHex);
         BinData uuid = (BinData) MongoRuntime.call(new NewInstanceAction(
                 (MongoScope) thisObj, "BinData", new Object[] { BSON.B_UUID,
                         str }));
@@ -385,7 +422,14 @@ public class MongoScope extends Global {
 
     public static final BinData MD5(Context cx, Scriptable thisObj,
             Object[] args, Function funObj) {
-        String str = hexToBase64(Context.toString(args[0]));
+        if (args.length != 1)
+            Context.throwAsScriptRuntimeEx(new MongoScriptException(
+                    "MD5 needs 1 argument"));
+        String md5Hex = Context.toString(args[0]);
+        if (md5Hex.length() != 32)
+            Context.throwAsScriptRuntimeEx(new MongoScriptException(
+                    "MD5 string must have 32 characters"));
+        String str = hexToBase64(md5Hex);
         // MD5Type = 5 in bsontypes.h
         BinData md5 = (BinData) MongoRuntime.call(new NewInstanceAction(
                 (MongoScope) thisObj, "BinData", new Object[] { 5, str }));
@@ -394,6 +438,9 @@ public class MongoScope extends Global {
 
     public static final BinData HexData(Context cx, Scriptable thisObj,
             Object[] args, Function funObj) {
+        if (args.length != 2)
+            Context.throwAsScriptRuntimeEx(new MongoScriptException(
+                    "HexData needs 2 arguments"));
         int type = Double.valueOf(Context.toNumber(args[0])).intValue();
         String str = hexToBase64(Context.toString(args[1]));
         BinData md5 = (BinData) MongoRuntime.call(new NewInstanceAction(
@@ -404,8 +451,10 @@ public class MongoScope extends Global {
     private static final String hexToBase64(final String hex) {
         String base64 = null;
         try {
-            base64 = Base64
-                    .encodeBase64String(Hex.decodeHex(hex.toCharArray()));
+            ByteBuffer decodedBuffer = ByteBuffer.wrap(Hex.decodeHex(hex
+                    .toCharArray()));
+            decodedBuffer.order(ByteOrder.LITTLE_ENDIAN);
+            base64 = Base64.encodeBase64String(decodedBuffer.array());
         } catch (DecoderException e) {
             Context.throwAsScriptRuntimeEx(e);
         }
@@ -425,6 +474,169 @@ public class MongoScope extends Global {
         }
 
         return Context.getUndefinedValue();
+    }
+
+    // *** extended shell functions ***
+
+    public static Object ls(Context cx, Scriptable thisObj, Object[] args,
+            Function funObj) {
+        File path = null;
+        if (args.length == 0)
+            path = ((MongoScope) thisObj).getCwd();
+        else if (args.length > 1)
+            Context.throwAsScriptRuntimeEx(new MongoScriptException(
+                    "need to specify 1 argument to listFiles"));
+        else
+            path = new File(Context.toString(args[0]));
+
+        // mongo only checks if the path exists, so we will do the same here
+        // official mongo has ls() call listFiles()... im not doing that here
+        // but i am honoring the error messages as they appear in the official
+        // shell
+        if (!path.exists())
+            Context.throwAsScriptRuntimeEx(new MongoScriptException(
+                    "listFiles: no such directory: " + path.getAbsolutePath()));
+        if (!path.isDirectory())
+            Context.throwAsScriptRuntimeEx(new MongoScriptException(
+                    "listFiles: not a directory: " + path.getAbsolutePath()));
+
+        List<String> files = new ArrayList<String>();
+        for (File file : path.listFiles()) {
+            String name = file.getPath();
+            if (file.isDirectory())
+                name += "/";
+            files.add(name);
+        }
+
+        Object jsResult = BSONizer.convertBSONtoJS((MongoScope) thisObj, files);
+
+        return jsResult;
+    }
+
+    public static Object cd(Context cx, Scriptable thisObj, Object[] args,
+            Function funObj) {
+        assertSingleArgument(args);
+        MongoScope mongoScope = (MongoScope) thisObj;
+        File newDir = new File(Context.toString(args[0]));
+        if (newDir.isDirectory()) {
+            mongoScope.setCwd(newDir);
+            return null;
+        } else
+            return "change directory failed";
+    }
+
+    public static Object mkdir(Context cx, Scriptable thisObj, Object[] args,
+            Function funObj) {
+        assertSingleArgument(args);
+        File newDir = new File(Context.toString(args[0]));
+        // despite what the official shell does, i want to return if this fails
+        return newDir.mkdirs();
+    }
+
+    public static Object pwd(Context cx, Scriptable thisObj, Object[] args,
+            Function funObj) {
+        return ((MongoScope) thisObj).getCwd().getAbsolutePath();
+    }
+
+    public static Object listFiles(Context cx, Scriptable thisObj,
+            Object[] args, Function funObj) {
+        File path = null;
+        if (args.length == 0)
+            path = ((MongoScope) thisObj).getCwd();
+        else if (args.length > 1)
+            Context.throwAsScriptRuntimeEx(new MongoScriptException(
+                    "need to specify 1 argument to listFiles"));
+        else
+            path = new File(Context.toString(args[0]));
+
+        // mongo only checks if the path exists, so we will do the same here
+        if (!path.exists())
+            Context.throwAsScriptRuntimeEx(new MongoScriptException(
+                    "listFiles: no such directory: " + path.getAbsolutePath()));
+        if (!path.isDirectory())
+            Context.throwAsScriptRuntimeEx(new MongoScriptException(
+                    "listFiles: not a directory: " + path.getAbsolutePath()));
+
+        List<DBObject> files = new ArrayList<DBObject>();
+        for (File file : path.listFiles()) {
+            BasicDBObjectBuilder fileObj = new BasicDBObjectBuilder();
+            fileObj.append("name", file.getPath()).append("isDirectory",
+                    file.isDirectory());
+            if (!file.isDirectory())
+                fileObj.append("size", file.length());
+            files.add(fileObj.get());
+        }
+
+        Object jsResult = BSONizer.convertBSONtoJS((MongoScope) thisObj, files);
+
+        return jsResult;
+    }
+
+    public static Object hostname(Context cx, Scriptable thisObj,
+            Object[] args, Function funObj) {
+        try {
+            return InetAddress.getLocalHost().getHostName();
+        } catch (UnknownHostException e) {
+            Context.throwAsScriptRuntimeEx(e);
+            return Undefined.instance;
+        }
+    }
+
+    public static Object cat(Context cx, Scriptable thisObj, Object[] args,
+            Function funObj) {
+        assertSingleArgument(args);
+        try {
+            return FileUtils.readFileToString(new File(Context
+                    .toString(args[0])));
+        } catch (IOException e) {
+            Context.throwAsScriptRuntimeEx(e);
+            return Undefined.instance;
+        }
+    }
+
+    public static Object removeFile(Context cx, Scriptable thisObj,
+            Object[] args, Function funObj) {
+        assertSingleArgument(args);
+        File toRemove = new File(Context.toString(args[0]));
+        return FileUtils.deleteQuietly(toRemove);
+    }
+
+    public static Object md5sumFile(Context cx, Scriptable thisObj,
+            Object[] args, Function funObj) {
+        throw new UnsupportedOperationException("md5sumFile TBD");
+    }
+
+    public static Object fuzzFile(Context cx, Scriptable thisObj,
+            Object[] args, Function funObj) {
+        throw new UnsupportedOperationException("md5sumFile TBD");
+    }
+
+    public static Object run(Context cx, Scriptable thisObj, Object[] args,
+            Function funObj) {
+        throw new UnsupportedOperationException("run(...) not supported");
+    }
+
+    public static Object runProgram(Context cx, Scriptable thisObj,
+            Object[] args, Function funObj) {
+        throw new UnsupportedOperationException("runProgram(...) not supported");
+    }
+
+    public static void sleep(Context cx, Scriptable thisObj, Object[] args,
+            Function funObj) throws NumberFormatException, InterruptedException {
+        Thread.sleep(Double.valueOf(args[0].toString()).longValue());
+    }
+
+    public static Object getMemInfo(Context cx, Scriptable thisObj,
+            Object[] args, Function funObj) {
+        throw new UnsupportedOperationException("getMemInfo() not supported");
+    }
+
+    // *** ******************** ***
+
+    public static final void assertSingleArgument(final Object[] args) {
+        if (args.length != 1)
+            Context.throwAsScriptRuntimeEx(new MongoScriptException(
+                    "need to specify 1 argument"));
     }
 
     public static final class InitMongoScopeAction extends MongoAction {
