@@ -40,10 +40,8 @@ public class ObjectId extends ScriptableMongoObject {
 	 */
 	private static final long serialVersionUID = 5594412197023274036L;
 	
-	@JSConstructor
 	public ObjectId() {
 		super();
-		realObjectId = new org.bson.types.ObjectId();
 	}
 	
 	@JSConstructor

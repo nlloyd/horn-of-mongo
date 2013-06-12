@@ -41,8 +41,6 @@ import org.mozilla.javascript.JavaScriptException;
 import org.mozilla.javascript.WrappedException;
 
 import com.github.joelittlejohn.embedmongo.log.Loggers;
-import com.github.nlloyd.hornofmongo.MongoRuntime;
-import com.github.nlloyd.hornofmongo.MongoScope;
 import com.github.nlloyd.hornofmongo.action.MongoScriptAction;
 
 import de.flapdoodle.embed.mongo.Command;
@@ -58,7 +56,6 @@ import de.flapdoodle.embed.process.config.IRuntimeConfig;
 import de.flapdoodle.embed.process.distribution.Distribution;
 import de.flapdoodle.embed.process.distribution.GenericVersion;
 import de.flapdoodle.embed.process.runtime.ICommandLinePostProcessor;
-import de.flapdoodle.embed.process.runtime.Network;
 
 /**
  * @author nlloyd
@@ -153,14 +150,23 @@ public class JSTest {
 
             @Override
             public boolean accept(File dir, String name) {
-                return !name.startsWith("_") && name.endsWith(".js")
+                return !name.startsWith("_")
+                        && name.endsWith(".js")
+//                        && (name.startsWith("json1")
+//                                || name.startsWith("numberint")
+//                                || name.startsWith("numberlong.")
+//                                || name.startsWith("objid1")
+//                                || name.startsWith("objid4")
+//                                || name.startsWith("server1470") || name
+//                                    .startsWith("shelltypes"))
                         && !excludedTests.contains(name);
             }
 
         };
-        
-        System.out.println("searching for official mongodb *.js test files in path: "
-                + cwd.toString());
+
+        System.out
+                .println("searching for official mongodb *.js test files in path: "
+                        + cwd.toString());
         File[] jsFiles = cwd.listFiles(jsFilter);
 
         List<Object[]> testScripts = new ArrayList<Object[]>(jsFiles.length);
@@ -168,13 +174,14 @@ public class JSTest {
         // ignored
         for (File jsFile : jsFiles)
             testScripts.add(new Object[] { jsFile.getName(), jsFile });
-        
+
         File rootJsTestDir = cwd.getParentFile();
-        System.out.println("searching for horn-of-mongo *.js test files in path: " 
-                + rootJsTestDir.toString());
+        System.out
+                .println("searching for horn-of-mongo *.js test files in path: "
+                        + rootJsTestDir.toString());
         File[] moreJsFiles = rootJsTestDir.listFiles(jsFilter);
-        
-        for(File jsFile : moreJsFiles)
+
+        for (File jsFile : moreJsFiles)
             testScripts.add(new Object[] { jsFile.getName(), jsFile });
 
         return testScripts;
@@ -218,7 +225,7 @@ public class JSTest {
 
         MongodConfig mongodConfig = new MongodConfig(
                 new GenericVersion("2.4.3"), new Net("127.0.0.1", 27017,
-                        Network.localhostIsIPv6()), new Storage(
+                        false), new Storage(
                         databaseDir.getAbsolutePath(), null, 0), new Timeout());
 
         mongodExec = MongodStarter.getInstance(runtimeConfig).prepare(

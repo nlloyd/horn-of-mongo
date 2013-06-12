@@ -23,18 +23,25 @@ package com.github.nlloyd.hornofmongo;
 
 import static java.util.Collections.synchronizedSet;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.RandomAccessFile;
 import java.io.Reader;
 import java.lang.reflect.InvocationTargetException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
+import java.security.DigestInputStream;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.List;
@@ -451,10 +458,8 @@ public class MongoScope extends Global {
     private static final String hexToBase64(final String hex) {
         String base64 = null;
         try {
-            ByteBuffer decodedBuffer = ByteBuffer.wrap(Hex.decodeHex(hex
-                    .toCharArray()));
-            decodedBuffer.order(ByteOrder.LITTLE_ENDIAN);
-            base64 = Base64.encodeBase64String(decodedBuffer.array());
+            base64 = Base64
+                    .encodeBase64String(Hex.decodeHex(hex.toCharArray()));
         } catch (DecoderException e) {
             Context.throwAsScriptRuntimeEx(e);
         }
@@ -603,22 +608,72 @@ public class MongoScope extends Global {
 
     public static Object md5sumFile(Context cx, Scriptable thisObj,
             Object[] args, Function funObj) {
-        throw new UnsupportedOperationException("md5sumFile TBD");
+        assertSingleArgument(args);
+        MessageDigest md = null;
+        try {
+            md = MessageDigest.getInstance("MD5");
+        } catch (NoSuchAlgorithmException e) {
+            Context.throwAsScriptRuntimeEx(e);
+        }
+        File inFile = new File(Context.toString(args[0]));
+        InputStream in = null;
+        try {
+            in = new BufferedInputStream(new FileInputStream(inFile));
+            DigestInputStream dis = new DigestInputStream(in, md);
+               while(dis.available() > 0)
+                   dis.read();
+            byte[] digest = md.digest();
+
+//            inline std::string digestToString( md5digest digest ){
+//                static const char * letters = "0123456789abcdef";
+//                stringstream ss;
+//                for ( int i=0; i<16; i++){
+//                    unsigned char c = digest[i];
+//                    ss << letters[ ( c >> 4 ) & 0xf ] << letters[ c & 0xf ];
+//                }
+//                return ss.str();
+//            }
+        } catch (FileNotFoundException e) {
+            Context.throwAsScriptRuntimeEx(e);
+        } catch (IOException e) {
+            Context.throwAsScriptRuntimeEx(e);
+        }
+        return null;
     }
 
     public static Object fuzzFile(Context cx, Scriptable thisObj,
             Object[] args, Function funObj) {
-        throw new UnsupportedOperationException("md5sumFile TBD");
+        if (args.length != 2)
+            Context.throwAsScriptRuntimeEx(new MongoScriptException(
+                    "fuzzFile takes 2 arguments"));
+        File fileToFuzz = new File(Context.toString(args[0]));
+        try {
+            RandomAccessFile fuzzFile = new RandomAccessFile(fileToFuzz, "rw");
+            long fuzzPosition = Double.valueOf(Context.toNumber(args[1])).longValue();
+            fuzzFile.seek(fuzzPosition);
+            byte byteToFuzz = fuzzFile.readByte();
+            BitSet bits = BitSet.valueOf(new byte[]{byteToFuzz});
+            bits.flip(0, 8);
+            fuzzFile.seek(fuzzPosition);
+            fuzzFile.write(bits.toByteArray());
+            fuzzFile.close();
+        } catch (FileNotFoundException e) {
+            Context.throwAsScriptRuntimeEx(e);
+        } catch (IOException e) {
+            Context.throwAsScriptRuntimeEx(e);
+        }
+
+        return Undefined.instance;
     }
 
     public static Object run(Context cx, Scriptable thisObj, Object[] args,
             Function funObj) {
-        throw new UnsupportedOperationException("run(...) not supported");
+        return "run(...) not supported";
     }
 
     public static Object runProgram(Context cx, Scriptable thisObj,
             Object[] args, Function funObj) {
-        throw new UnsupportedOperationException("runProgram(...) not supported");
+        return "runProgram(...) not supported";
     }
 
     public static void sleep(Context cx, Scriptable thisObj, Object[] args,
@@ -628,7 +683,7 @@ public class MongoScope extends Global {
 
     public static Object getMemInfo(Context cx, Scriptable thisObj,
             Object[] args, Function funObj) {
-        throw new UnsupportedOperationException("getMemInfo() not supported");
+        return "getMemInfo() not supported";
     }
 
     // *** ******************** ***

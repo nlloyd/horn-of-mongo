@@ -21,9 +21,6 @@
  */
 package com.github.nlloyd.hornofmongo;
 
-import static org.mozilla.javascript.Context.FEATURE_DYNAMIC_SCOPE;
-import static org.mozilla.javascript.Context.FEATURE_LOCATION_INFORMATION_IN_ERROR;
-
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ContextFactory;
 
@@ -32,6 +29,27 @@ import org.mozilla.javascript.ContextFactory;
  * 
  */
 public class MongoContextFactory extends ContextFactory {
+    private int languageVersion = Context.VERSION_1_8;
+
+    @Override
+    protected boolean hasFeature(Context cx, int featureIndex)
+    {
+        switch (featureIndex) {
+          case Context.FEATURE_STRICT_VARS:
+          case Context.FEATURE_RESERVED_KEYWORD_AS_IDENTIFIER:
+          case Context.FEATURE_LOCATION_INFORMATION_IN_ERROR:
+          case Context.FEATURE_DYNAMIC_SCOPE:
+            return true;
+        }
+        return super.hasFeature(cx, featureIndex);
+    }
+
+    @Override
+    protected void onContextCreated(Context cx)
+    {
+        cx.setLanguageVersion(languageVersion);
+        super.onContextCreated(cx);
+    }
 
     /**
      * Override {@link #hasFeature(Context, int)}
@@ -41,14 +59,15 @@ public class MongoContextFactory extends ContextFactory {
      * 
      * Only {@link Context#FEATURE_DYNAMIC_SCOPE} is important, for DBRef types.
      */
-    @Override
-    public boolean hasFeature(Context cx, int featureIndex) {
-        switch (featureIndex) {
-        case FEATURE_LOCATION_INFORMATION_IN_ERROR:
-        case FEATURE_DYNAMIC_SCOPE:
-            return true;
-        }
-        return super.hasFeature(cx, featureIndex);
-    }
+//    @Override
+//    public boolean hasFeature(Context cx, int featureIndex) {
+//        switch (featureIndex) {
+//        case FEATURE_LOCATION_INFORMATION_IN_ERROR:
+//        case FEATURE_DYNAMIC_SCOPE:
+//        case VERSION_1_8:
+//            return true;
+//        }
+//        return super.hasFeature(cx, featureIndex);
+//    }
 
 }

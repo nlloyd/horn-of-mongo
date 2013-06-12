@@ -28,6 +28,8 @@ import static org.easymock.EasyMock.isA;
 import static org.easymock.EasyMock.replay;
 import static org.easymock.EasyMock.verify;
 
+import java.io.IOException;
+
 import org.junit.Test;
 import org.mozilla.javascript.Context;
 
@@ -41,7 +43,7 @@ import com.github.nlloyd.hornofmongo.util.PrintHandler;
 public class HelpCommandTest {
 
     @Test
-    public void testHelpNoArgs() {
+    public void testHelpNoArgs() throws IOException {
         MongoScope testScope = MongoRuntime.createMongoScope();
         PrintHandler mockPrintHandler = createStrictMock(PrintHandler.class);
         testScope.setPrintHandler(mockPrintHandler);

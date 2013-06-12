@@ -21,13 +21,18 @@
  */
 package com.github.nlloyd.hornofmongo.util;
 
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.UUID;
 import java.util.regex.Pattern;
 
+import org.bson.BSON;
 import org.bson.BSONObject;
 import org.bson.types.BSONTimestamp;
+import org.bson.types.Binary;
 import org.bson.types.Code;
 import org.bson.types.Symbol;
 import org.mozilla.javascript.BaseFunction;
@@ -214,6 +219,24 @@ public class BSONizer {
             jsObject = Double.valueOf((Integer)bsonObject);
         } else if (bsonObject instanceof Code) {
             jsObject = ((Code) bsonObject).getCode();
+        } else if (bsonObject instanceof byte[]) {
+	        jsObject = MongoRuntime.call(new NewInstanceAction(mongoScope,
+			        "BinData"));
+	        ((BinData)jsObject).setValues(0, (byte[])bsonObject);
+        } else if (bsonObject instanceof Binary) {
+	        jsObject = MongoRuntime.call(new NewInstanceAction(mongoScope,
+			        "BinData"));
+	        ((BinData)jsObject).setValues(((Binary) bsonObject).getType(), ((Binary) bsonObject).getData());
+        } else if (bsonObject instanceof UUID) {
+	        jsObject = MongoRuntime.call(new NewInstanceAction(mongoScope,
+			        "BinData"));
+	        UUID uuid = (UUID)bsonObject;
+	        ByteBuffer dataBuffer = ByteBuffer.allocate(16);
+	        // mongodb wire protocol is little endian
+	        dataBuffer.order(ByteOrder.LITTLE_ENDIAN);
+	        dataBuffer.putLong(uuid.getMostSignificantBits());
+	        dataBuffer.putLong(uuid.getLeastSignificantBits());
+            ((BinData)jsObject).setValues(BSON.B_UUID, dataBuffer.array());
         } else {
             jsObject = bsonObject;
         }
@@ -254,8 +277,16 @@ public class BSONizer {
         } else if (jsMongoObj instanceof BinData) {
             BinData binData = (BinData)jsMongoObj;
             byte type = new Integer(binData.getType()).byteValue();
-            byte[] data = binData.getData().getBytes();
-            bsonObject = new org.bson.types.Binary(type, data);
+            byte[] data = binData.getDataBytes();
+            if(type == BSON.B_UUID) {
+                ByteBuffer dataBuffer = ByteBuffer.wrap(data);
+                // mongodb wire protocol is little endian
+                dataBuffer.order(ByteOrder.LITTLE_ENDIAN);
+                long mostSigBits = dataBuffer.getLong();
+                long leastSigBits = dataBuffer.getLong();
+                bsonObject = new UUID(mostSigBits, leastSigBits);
+            } else
+                bsonObject = new org.bson.types.Binary(type, data);
         } else if (jsMongoObj instanceof MinKey) {
             bsonObject = new org.bson.types.MinKey();
         } else if (jsMongoObj instanceof MaxKey) {

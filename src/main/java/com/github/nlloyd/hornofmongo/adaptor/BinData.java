@@ -24,69 +24,87 @@ package com.github.nlloyd.hornofmongo.adaptor;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Hex;
 import org.mozilla.javascript.Context;
+import org.mozilla.javascript.Undefined;
 import org.mozilla.javascript.annotations.JSConstructor;
 import org.mozilla.javascript.annotations.JSFunction;
 
 /**
  * @author nlloyd
- *
+ * 
  */
 public class BinData extends ScriptableMongoObject {
-	
-	private int type;
-	private String data;
 
-	/**
+    private int type;
+    private String data;
+
+    /**
 	 * 
 	 */
-	private static final long serialVersionUID = 8887293438121607724L;
-	
-	public BinData() {}
-	
-	@JSConstructor
-	public BinData(int type, Object obj) {
+    private static final long serialVersionUID = 8887293438121607724L;
+
+    public BinData() {
+    }
+
+    @JSConstructor
+    public BinData(int type, Object obj) {
         super();
-		if((type < 0) ||(type > 255)) {
-			throw new IllegalArgumentException(
-					"invalid BinData subtype -- range is 0..255 see bsonspec.org");
-		}
-		this.type = type;
-		this.data = Context.toString(obj);
-		byte[] tmpData = Base64.decodeBase64(this.data);
-		put("type", this, type);
-		put("len", this, tmpData.length);
-	}
+        if(!(obj instanceof Undefined))
+            setValues(type, obj);
+    }
+    
+    public void setValues(int type, Object obj) {
+        // carried over from sm_db.cpp, not v8_db.cpp which doesn't have this
+        // check for some reason
+        if ((type < 0) || (type > 255)) {
+            throw new IllegalArgumentException(
+                    "invalid BinData subtype -- range is 0..255 see bsonspec.org");
+        }
+        this.type = type;
+        byte[] tmpData = new byte[]{};
+        if(obj instanceof byte[]) {
+            tmpData = (byte[])obj;
+            this.data = Base64.encodeBase64String(tmpData);
+        } else {
+            this.data = Context.toString(obj);
+            tmpData = Base64.decodeBase64(this.data);
+        }
+        put("type", this, type);
+        put("len", this, tmpData.length);
+    }
 
-	/**
-	 * @see org.mozilla.javascript.ScriptableObject#getClassName()
-	 */
-	@Override
-	public String getClassName() {
-		return this.getClass().getSimpleName();
-	}
-	
-	@JSFunction
-	public String toString() {
-		return "BinData(" + type + ",\"" + data + "\")";
-	}
-	
-	@JSFunction
-	public String base64() {
-		return data;
-	}
-	
-	@JSFunction
-	public String hex() {
-	    String hexStr = Hex.encodeHexString(Base64.decodeBase64(this.data));
-		return hexStr;
-	}
-	
-	public int getType() {
-	    return type;
-	}
-	
-	public String getData() {
-	    return data;
-	}
+    /**
+     * @see org.mozilla.javascript.ScriptableObject#getClassName()
+     */
+    @Override
+    public String getClassName() {
+        return this.getClass().getSimpleName();
+    }
 
+    @JSFunction
+    public String toString() {
+        return "BinData(" + type + ",\"" + data + "\")";
+    }
+
+    @JSFunction
+    public String base64() {
+        return data;
+    }
+
+    @JSFunction
+    public String hex() {
+        String hexStr = Hex.encodeHexString(Base64.decodeBase64(this.data));
+        return hexStr;
+    }
+
+    public int getType() {
+        return type;
+    }
+
+    public String getData() {
+        return data;
+    }
+
+	public byte[] getDataBytes() {
+		return Base64.decodeBase64(this.data);
+	}
 }
