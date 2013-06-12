@@ -80,14 +80,14 @@ public class ExtendedShellTest {
 
         // with argument
         Object result2 = MongoRuntime.call(new MongoScriptAction(testScope,
-                "ls('target');"));
+                "ls('jstests');"));
         Object resultConverted2 = BSONizer.convertJStoBSON(result2, true);
         assertTrue(resultConverted2 instanceof List<?>);
         @SuppressWarnings("unchecked")
         List<Object> lsResult2 = (List<Object>) resultConverted2;
-        File[] filesList2 = new File(testScope.getCwd(), "target").listFiles();
+        File[] filesList2 = new File(testScope.getCwd(), "jstests").listFiles();
         for (File file : filesList2) {
-            String nameToCheck = "target/" + file.getName();
+            String nameToCheck = "jstests/" + file.getName();
             if (file.isDirectory())
                 nameToCheck += "/";
             assertTrue("name not found: " + nameToCheck,
@@ -107,25 +107,31 @@ public class ExtendedShellTest {
 
     @Test
     public void test_cd() {
-        MongoRuntime.call(new MongoScriptAction(testScope, "cd('target')"));
-        assertEquals(new File("target"), testScope.getCwd());
-        MongoRuntime.call(new MongoScriptAction(testScope, "cd('../')"));
-        assertEquals(new File("../"), testScope.getCwd());
+        MongoRuntime.call(new MongoScriptAction(testScope, "cd('jstests')"));
+        assertEquals(new File("jstests").getAbsolutePath(), testScope.getCwd()
+                .getAbsolutePath());
+        MongoRuntime
+                .call(new MongoScriptAction(testScope, "cd('../')"));
+        assertEquals(new File(System.getProperty("user.dir")).getAbsolutePath(), testScope
+                .getCwd().getAbsolutePath());
     }
 
     @Test
     public void test_mkdir() throws IOException {
-        final String pathToMake = "target/make/this/dir";
+        final String pathToMake = "make_dir_test/make/this/dir";
 
-        FileUtils.deleteDirectory(new File("target", "make"));
+        FileUtils.deleteDirectory(new File("make_dir_test"));
 
         final File expectedDir = new File(pathToMake);
         Object wasMade = MongoRuntime.call(new MongoScriptAction(testScope,
-                pathToMake));
+                "mkdir('" + pathToMake + "')"));
         assertTrue(wasMade instanceof Boolean);
         assertTrue((Boolean) wasMade);
         assertTrue(expectedDir.exists());
         assertTrue(expectedDir.isDirectory());
+
+        // cleanup
+        FileUtils.deleteDirectory(new File("make_dir_test"));
     }
 
     @Test
@@ -168,7 +174,7 @@ public class ExtendedShellTest {
 
         // with arument
         Object result2 = MongoRuntime.call(new MongoScriptAction(testScope,
-                "listFiles('target');"));
+                "listFiles('jstests');"));
         Object resultConverted2 = BSONizer.convertJStoBSON(result2, true);
         assertTrue(resultConverted2 instanceof List<?>);
         @SuppressWarnings("unchecked")
@@ -184,9 +190,9 @@ public class ExtendedShellTest {
                 assertTrue(fileData.containsField("size"));
             namesToData2.put(fileData.get("name").toString(), fileData);
         }
-        File[] filesList2 = new File(testScope.getCwd(), "target").listFiles();
+        File[] filesList2 = new File(testScope.getCwd(), "jstests").listFiles();
         for (File file : filesList2) {
-            String nameToCheck = "target/" + file.getName();
+            String nameToCheck = "jstests/" + file.getName();
             assertTrue("name not found: " + nameToCheck,
                     namesToData2.containsKey(nameToCheck));
             if (!(Boolean) namesToData2.get(nameToCheck).get("isDirectory"))
@@ -240,29 +246,35 @@ public class ExtendedShellTest {
         assertFalse(dummyFile.exists());
     }
 
-//    @Test
-//    public void test_md5sumFile() {
-//        fail("Not yet implemented");
-//    }
-//
-//    @Test
-//    public void test_fuzzFile() {
-//        fail("Not yet implemented");
-//    }
+    // @Test
+    // public void test_md5sumFile() {
+    // fail("Not yet implemented");
+    // }
+    //
+    // @Test
+    // public void test_fuzzFile() {
+    // fail("Not yet implemented");
+    // }
 
-    @Test(expected = WrappedException.class)
+    @Test
     public void test_run() {
-        MongoRuntime.call(new MongoScriptAction(testScope, "run();"));
+        String result = (String) MongoRuntime.call(new MongoScriptAction(
+                testScope, "run();"));
+        assertTrue(result.contains("not supported"));
     }
 
-    @Test(expected = WrappedException.class)
+    @Test
     public void test_runProgram() {
-        MongoRuntime.call(new MongoScriptAction(testScope, "runProgram();"));
+        String result = (String) MongoRuntime.call(new MongoScriptAction(
+                testScope, "runProgram();"));
+        assertTrue(result.contains("not supported"));
     }
 
-    @Test(expected = WrappedException.class)
+    @Test
     public void test_getMemInfo() {
-        MongoRuntime.call(new MongoScriptAction(testScope, "getMemInfo();"));
+        String result = (String) MongoRuntime.call(new MongoScriptAction(
+                testScope, "getMemInfo();"));
+        assertTrue(result.contains("not supported"));
     }
 
 }

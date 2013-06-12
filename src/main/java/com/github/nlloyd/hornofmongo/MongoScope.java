@@ -522,9 +522,16 @@ public class MongoScope extends Global {
             Function funObj) {
         assertSingleArgument(args);
         MongoScope mongoScope = (MongoScope) thisObj;
-        File newDir = new File(Context.toString(args[0]));
-        if (newDir.isDirectory()) {
-            mongoScope.setCwd(newDir);
+        String dirPath = Context.toString(args[0]);
+        File cwd = mongoScope.getCwd();
+        if(dirPath.startsWith("../")) {
+            cwd = cwd.getAbsoluteFile().getParentFile();
+            dirPath = dirPath.substring(3);
+            cwd = new File(cwd, dirPath);
+        } else
+            cwd = new File(dirPath);
+        if (cwd.isDirectory()) {
+            mongoScope.setCwd(cwd);
             return null;
         } else
             return "change directory failed";
