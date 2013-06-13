@@ -41,7 +41,6 @@ import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
-import java.util.BitSet;
 import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.List;
@@ -65,6 +64,7 @@ import org.mozilla.javascript.ast.Scope;
 import org.mozilla.javascript.tools.shell.Global;
 
 import com.github.nlloyd.hornofmongo.action.MongoAction;
+import com.github.nlloyd.hornofmongo.action.MongoScriptAction;
 import com.github.nlloyd.hornofmongo.action.NewInstanceAction;
 import com.github.nlloyd.hornofmongo.adaptor.BinData;
 import com.github.nlloyd.hornofmongo.adaptor.DB;
@@ -126,9 +126,9 @@ public class MongoScope extends Global {
     private PrintHandler printHandler;
 
     /**
-     * Adaptor class prototype registry. For some reason this is required
-     * otherwise we get several test failures. I suspect there is a bug in Rhino
-     * around prototype handling: TODO investigate further.
+     * Adaptor class prototype registry. This is required for handling calls to
+     * create mongodb types without the "new" keyword which Rhino uses as an
+     * indicator to set prototypes.
      * 
      */
     private Map<Class<? extends ScriptableMongoObject>, Scriptable> childPrototypeRegistry = new Hashtable<Class<? extends ScriptableMongoObject>, Scriptable>();
@@ -266,10 +266,10 @@ public class MongoScope extends Global {
             super.init(context);
         }
 
-        String[] names = { "sleep", "hex_md5", "_isWindows", "_srand", "_rand",
-                "UUID", "MD5", "HexData", "print", "ls", "cd", "mkdir", "pwd",
-                "listFiles", "hostname", "cat", "removeFile", "md5sumFile",
-                "fuzzFile", "run", "runProgram", "getMemInfo" };
+        String[] names = { "eval", "sleep", "hex_md5", "_isWindows", "_srand",
+                "_rand", "UUID", "MD5", "HexData", "print", "ls", "cd",
+                "mkdir", "pwd", "listFiles", "hostname", "cat", "removeFile",
+                "md5sumFile", "fuzzFile", "run", "runProgram", "getMemInfo" };
         defineFunctionProperties(names, this.getClass(),
                 ScriptableObject.DONTENUM);
         ScriptableObject objectPrototype = (ScriptableObject) ScriptableObject
@@ -361,6 +361,14 @@ public class MongoScope extends Global {
     }
 
     /* --- global and globalish utility functions --- */
+
+    public static Object eval(Context cx, Scriptable thisObj, Object[] args,
+            Function funObj) {
+        final String evalScript = Context.toString(args[0]);
+        Object result = MongoRuntime.call(new MongoScriptAction((MongoScope) thisObj,
+                "(eval)", evalScript));
+        return result;
+    }
 
     // public static Object version(Context cx, Scriptable thisObj, Object[]
     // args,
@@ -524,7 +532,7 @@ public class MongoScope extends Global {
         MongoScope mongoScope = (MongoScope) thisObj;
         String dirPath = Context.toString(args[0]);
         File cwd = mongoScope.getCwd();
-        if(dirPath.startsWith("../")) {
+        if (dirPath.startsWith("../")) {
             cwd = cwd.getAbsoluteFile().getParentFile();
             dirPath = dirPath.substring(3);
             cwd = new File(cwd, dirPath);
@@ -627,19 +635,19 @@ public class MongoScope extends Global {
         try {
             in = new BufferedInputStream(new FileInputStream(inFile));
             DigestInputStream dis = new DigestInputStream(in, md);
-               while(dis.available() > 0)
-                   dis.read();
+            while (dis.available() > 0)
+                dis.read();
             byte[] digest = md.digest();
 
-//            inline std::string digestToString( md5digest digest ){
-//                static const char * letters = "0123456789abcdef";
-//                stringstream ss;
-//                for ( int i=0; i<16; i++){
-//                    unsigned char c = digest[i];
-//                    ss << letters[ ( c >> 4 ) & 0xf ] << letters[ c & 0xf ];
-//                }
-//                return ss.str();
-//            }
+            // inline std::string digestToString( md5digest digest ){
+            // static const char * letters = "0123456789abcdef";
+            // stringstream ss;
+            // for ( int i=0; i<16; i++){
+            // unsigned char c = digest[i];
+            // ss << letters[ ( c >> 4 ) & 0xf ] << letters[ c & 0xf ];
+            // }
+            // return ss.str();
+            // }
         } catch (FileNotFoundException e) {
             Context.throwAsScriptRuntimeEx(e);
         } catch (IOException e) {
@@ -656,13 +664,13 @@ public class MongoScope extends Global {
         File fileToFuzz = new File(Context.toString(args[0]));
         try {
             RandomAccessFile fuzzFile = new RandomAccessFile(fileToFuzz, "rw");
-            long fuzzPosition = Double.valueOf(Context.toNumber(args[1])).longValue();
+            long fuzzPosition = Double.valueOf(Context.toNumber(args[1]))
+                    .longValue();
             fuzzFile.seek(fuzzPosition);
-            byte byteToFuzz = fuzzFile.readByte();
-            BitSet bits = BitSet.valueOf(new byte[]{byteToFuzz});
-            bits.flip(0, 8);
+            int byteToFuzz = fuzzFile.readByte();
+            byteToFuzz = ~byteToFuzz;
             fuzzFile.seek(fuzzPosition);
-            fuzzFile.write(bits.toByteArray());
+            fuzzFile.write(byteToFuzz);
             fuzzFile.close();
         } catch (FileNotFoundException e) {
             Context.throwAsScriptRuntimeEx(e);
