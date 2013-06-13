@@ -22,7 +22,6 @@
 package com.github.nlloyd.hornofmongo.action;
 
 import org.mozilla.javascript.ContextAction;
-import org.mozilla.javascript.Scriptable;
 
 import com.github.nlloyd.hornofmongo.MongoScope;
 
@@ -32,10 +31,14 @@ import com.github.nlloyd.hornofmongo.MongoScope;
  */
 public abstract class MongoAction implements ContextAction {
 	
-	protected Scriptable mongoScope;
+	protected MongoScope mongoScope;
 	
 	public MongoAction(MongoScope mongoScope) {
 		this.mongoScope = mongoScope;
+	}
+	
+	public MongoScope getScope() {
+	    return mongoScope;
 	}
 
 }

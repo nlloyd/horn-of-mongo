@@ -42,9 +42,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.Hashtable;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
@@ -55,6 +53,7 @@ import org.apache.commons.io.FileUtils;
 import org.bson.BSON;
 import org.bson.io.BasicOutputBuffer;
 import org.mozilla.javascript.Context;
+import org.mozilla.javascript.ContextFactory.Listener;
 import org.mozilla.javascript.Function;
 import org.mozilla.javascript.JavaScriptException;
 import org.mozilla.javascript.Scriptable;
@@ -79,7 +78,6 @@ import com.github.nlloyd.hornofmongo.adaptor.Mongo;
 import com.github.nlloyd.hornofmongo.adaptor.NumberInt;
 import com.github.nlloyd.hornofmongo.adaptor.NumberLong;
 import com.github.nlloyd.hornofmongo.adaptor.ObjectId;
-import com.github.nlloyd.hornofmongo.adaptor.ScriptableMongoObject;
 import com.github.nlloyd.hornofmongo.adaptor.Timestamp;
 import com.github.nlloyd.hornofmongo.exception.MongoScopeException;
 import com.github.nlloyd.hornofmongo.exception.MongoScriptException;
@@ -103,12 +101,14 @@ import com.mongodb.util.Util;
  * @author nlloyd
  * 
  */
-public class MongoScope extends Global {
+public class MongoScope extends Global implements Listener {
 
     /**
 	 * 
 	 */
     private static final long serialVersionUID = 4650743395507077775L;
+    
+    private static ThreadLocal<MongoScope> threadLocalScope = new ThreadLocal<MongoScope>();
 
     private static ThreadLocal<Random> threadLocalRandomGen = new ThreadLocal<Random>() {
         protected Random initialValue() {
@@ -124,14 +124,6 @@ public class MongoScope extends Global {
             "mongodb/shardingtest.js" };
 
     private PrintHandler printHandler;
-
-    /**
-     * Adaptor class prototype registry. This is required for handling calls to
-     * create mongodb types without the "new" keyword which Rhino uses as an
-     * indicator to set prototypes.
-     * 
-     */
-    private Map<Class<? extends ScriptableMongoObject>, Scriptable> childPrototypeRegistry = new Hashtable<Class<? extends ScriptableMongoObject>, Scriptable>();
 
     /**
      * If true then some {@link MongoException} will be caught and the messages
@@ -209,13 +201,6 @@ public class MongoScope extends Global {
      */
     public PrintHandler getPrintHandler() {
         return printHandler;
-    }
-
-    /**
-     * @return the childPrototypeRegistry
-     */
-    public Map<Class<? extends ScriptableMongoObject>, Scriptable> getChildPrototypeRegistry() {
-        return childPrototypeRegistry;
     }
 
     /**
@@ -359,14 +344,38 @@ public class MongoScope extends Global {
         } else
             throw me;
     }
+    
+    /* --- ContextFactory.Listener implementation --- */
+
+    /**
+     * When the Context is created set this MongoScope to the
+     * {@link ThreadLocal}.
+     */
+    @Override
+    public void contextCreated(Context cx) {
+        threadLocalScope.set(this);
+    }
+
+    /**
+     * When the Context is released remove this MongoScope
+     * from the {@link ThreadLocal}.
+     */
+    @Override
+    public void contextReleased(Context cx) {
+        threadLocalScope.remove();
+    }
+    
+    public static MongoScope getThreadLocalScope() {
+        return threadLocalScope.get();
+    }
 
     /* --- global and globalish utility functions --- */
 
     public static Object eval(Context cx, Scriptable thisObj, Object[] args,
             Function funObj) {
         final String evalScript = Context.toString(args[0]);
-        Object result = MongoRuntime.call(new MongoScriptAction((MongoScope) thisObj,
-                "(eval)", evalScript));
+        Object result = MongoRuntime.call(new MongoScriptAction(
+                (MongoScope) thisObj, "(eval)", evalScript));
         return result;
     }
 
@@ -732,4 +741,5 @@ public class MongoScope extends Global {
         }
 
     }
+    
 }

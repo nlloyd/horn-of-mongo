@@ -63,6 +63,8 @@ import de.flapdoodle.embed.process.runtime.ICommandLinePostProcessor;
  */
 @RunWith(Parameterized.class)
 public class JSTest {
+    
+    private static final String MONGOD_VERSION = "2.4.3";
 
     private static File cwd = null;
 
@@ -152,13 +154,17 @@ public class JSTest {
             public boolean accept(File dir, String name) {
                 return !name.startsWith("_")
                         && name.endsWith(".js")
-//                        && (name.startsWith("json1")
+//                        && name.startsWith("constructWithoutNew")
+//                        && (
+//                                name.startsWith("json1")
 //                                || name.startsWith("numberint")
 //                                || name.startsWith("numberlong.")
-//                                || name.startsWith("objid1")
+//                                || 
+//                                name.startsWith("objid1")
 //                                || name.startsWith("objid4")
 //                                || name.startsWith("server1470") || name
-//                                    .startsWith("shelltypes"))
+//                                    .startsWith("shelltypes")
+//                                    )
                         && !excludedTests.contains(name);
             }
 
@@ -224,7 +230,7 @@ public class JSTest {
                 .build();
 
         MongodConfig mongodConfig = new MongodConfig(
-                new GenericVersion("2.4.3"), new Net("127.0.0.1", 27017,
+                new GenericVersion(MONGOD_VERSION), new Net("127.0.0.1", 27017,
                         false), new Storage(
                         databaseDir.getAbsolutePath(), null, 0), new Timeout());
 

@@ -1,10 +1,11 @@
 
+print('stuff');
 var s1 = new Timestamp();
 var s2 = Timestamp();
 assert.eq(nl1, nl2, "Timestamp mismatch");
 
 var oid1 = new ObjectId();
-var oid2 = ObjectId(oid2.toString());
+var oid2 = ObjectId(oid1.valueOf());
 assert.eq(nl1, nl2, "ObjectId mismatch");
 
 var nl1 = new NumberLong(1);

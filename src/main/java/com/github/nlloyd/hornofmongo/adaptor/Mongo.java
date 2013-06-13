@@ -116,8 +116,8 @@ public class Mongo extends ScriptableMongoObject {
     @Override
     public void setParentScope(Scriptable m) {
         super.setParentScope(m);
-        // don't create a client connection for the prototype
-        if (!mongoScope.getChildPrototypeRegistry().containsValue(this)) {
+        // don't create a client connection for the prototype instance
+        if (ScriptableObject.getClassPrototype(m, getClassName()) != null) {
             try {
                 initMongoConnection();
                 mongoScope.addMongoConnection(this);
