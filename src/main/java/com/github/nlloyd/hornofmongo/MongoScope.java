@@ -53,7 +53,6 @@ import org.apache.commons.io.FileUtils;
 import org.bson.BSON;
 import org.bson.io.BasicOutputBuffer;
 import org.mozilla.javascript.Context;
-import org.mozilla.javascript.ContextFactory.Listener;
 import org.mozilla.javascript.Function;
 import org.mozilla.javascript.JavaScriptException;
 import org.mozilla.javascript.Scriptable;
@@ -63,7 +62,6 @@ import org.mozilla.javascript.ast.Scope;
 import org.mozilla.javascript.tools.shell.Global;
 
 import com.github.nlloyd.hornofmongo.action.MongoAction;
-import com.github.nlloyd.hornofmongo.action.MongoScriptAction;
 import com.github.nlloyd.hornofmongo.action.NewInstanceAction;
 import com.github.nlloyd.hornofmongo.adaptor.BinData;
 import com.github.nlloyd.hornofmongo.adaptor.DB;
@@ -101,15 +99,13 @@ import com.mongodb.util.Util;
  * @author nlloyd
  * 
  */
-public class MongoScope extends Global implements Listener {
+public class MongoScope extends Global {
 
     /**
 	 * 
 	 */
     private static final long serialVersionUID = 4650743395507077775L;
     
-    private static ThreadLocal<MongoScope> threadLocalScope = new ThreadLocal<MongoScope>();
-
     private static ThreadLocal<Random> threadLocalRandomGen = new ThreadLocal<Random>() {
         protected Random initialValue() {
             return new Random();
@@ -251,7 +247,7 @@ public class MongoScope extends Global implements Listener {
             super.init(context);
         }
 
-        String[] names = { "eval", "sleep", "hex_md5", "_isWindows", "_srand",
+        String[] names = { "sleep", "hex_md5", "_isWindows", "_srand",
                 "_rand", "UUID", "MD5", "HexData", "print", "ls", "cd",
                 "mkdir", "pwd", "listFiles", "hostname", "cat", "removeFile",
                 "md5sumFile", "fuzzFile", "run", "runProgram", "getMemInfo" };
@@ -345,39 +341,15 @@ public class MongoScope extends Global implements Listener {
             throw me;
     }
     
-    /* --- ContextFactory.Listener implementation --- */
-
-    /**
-     * When the Context is created set this MongoScope to the
-     * {@link ThreadLocal}.
-     */
-    @Override
-    public void contextCreated(Context cx) {
-        threadLocalScope.set(this);
-    }
-
-    /**
-     * When the Context is released remove this MongoScope
-     * from the {@link ThreadLocal}.
-     */
-    @Override
-    public void contextReleased(Context cx) {
-        threadLocalScope.remove();
-    }
-    
-    public static MongoScope getThreadLocalScope() {
-        return threadLocalScope.get();
-    }
-
     /* --- global and globalish utility functions --- */
 
-    public static Object eval(Context cx, Scriptable thisObj, Object[] args,
-            Function funObj) {
-        final String evalScript = Context.toString(args[0]);
-        Object result = MongoRuntime.call(new MongoScriptAction(
-                (MongoScope) thisObj, "(eval)", evalScript));
-        return result;
-    }
+//    public static Object eval(Context cx, Scriptable thisObj, Object[] args,
+//            Function funObj) {
+//        final String evalScript = Context.toString(args[0]);
+//        Object result = MongoRuntime.call(new MongoScriptAction(
+//                (MongoScope) thisObj, "(eval)", evalScript));
+//        return result;
+//    }
 
     // public static Object version(Context cx, Scriptable thisObj, Object[]
     // args,
@@ -725,7 +697,7 @@ public class MongoScope extends Global implements Listener {
         }
 
         @Override
-        public Object run(Context cx) {
+        public Object doRun(Context cx) {
             try {
                 return new MongoScope(cx);
             } catch (IllegalAccessException e) {

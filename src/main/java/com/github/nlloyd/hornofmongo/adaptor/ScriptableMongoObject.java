@@ -25,6 +25,7 @@ import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
 
+import com.github.nlloyd.hornofmongo.MongoContext;
 import com.github.nlloyd.hornofmongo.MongoScope;
 import com.github.nlloyd.hornofmongo.exception.MongoRuntimeException;
 import com.github.nlloyd.hornofmongo.exception.MongoScopeException;
@@ -51,11 +52,11 @@ public abstract class ScriptableMongoObject extends ScriptableObject {
     }
 
     /**
-     * Intercepts {@link ScriptableObject#get(String, Scriptable)} calls
-     * in order to determine if protoype and parent scope has been set.
+     * Intercepts {@link ScriptableObject#get(String, Scriptable)} calls in
+     * order to determine if protoype and parent scope has been set.
      * 
      * @see org.mozilla.javascript.ScriptableObject#get(java.lang.String,
-     * org.mozilla.javascript.Scriptable)
+     *      org.mozilla.javascript.Scriptable)
      */
     @Override
     public Object get(String name, Scriptable start) {
@@ -64,11 +65,11 @@ public abstract class ScriptableMongoObject extends ScriptableObject {
     }
 
     /**
-     * Intercepts {@link ScriptableObject#get(int, Scriptable)} calls
-     * in order to determine if protoype and parent scope has been set.
+     * Intercepts {@link ScriptableObject#get(int, Scriptable)} calls in order
+     * to determine if protoype and parent scope has been set.
      * 
      * @see org.mozilla.javascript.ScriptableObject#get(int,
-     * org.mozilla.javascript.Scriptable)
+     *      org.mozilla.javascript.Scriptable)
      */
     @Override
     public Object get(int index, Scriptable start) {
@@ -77,13 +78,13 @@ public abstract class ScriptableMongoObject extends ScriptableObject {
     }
 
     /**
-     * Special handling for situations where the "new" keyword isn't used
-     * when calling a constructor.  This results in a strange situation in
-     * Rhino where a ScriptableObject is created without the parent scope
-     * or prototype being set.  This will check for {@link ScriptableMongoObject}
-     * instances for that particular situation and leverage previously created
-     * {@link ThreadLocal<MongoScope>} to grab the current {@link MongoScope}
-     * for the currently executing thread.
+     * Special handling for situations where the "new" keyword isn't used when
+     * calling a constructor. This results in a strange situation in Rhino where
+     * a ScriptableObject is created without the parent scope or prototype being
+     * set. This will check for {@link ScriptableMongoObject} instances for that
+     * particular situation and leverage previously created {@link ThreadLocal
+     * <MongoScope>} to grab the current {@link MongoScope} for the currently
+     * executing thread.
      */
     private void resolveParentAndPrototype() {
         // if we dont have a parent scope or prototype yet, grab from
@@ -92,10 +93,14 @@ public abstract class ScriptableMongoObject extends ScriptableObject {
         // MongoScope's
         // ContextFactory.Listener implementation
         if (getParentScope() == null) {
-            MongoScope threadLocalScope = MongoScope.getThreadLocalScope();
-            setParentScope(threadLocalScope);
+            Context context = Context.getCurrentContext();
+            if (context instanceof MongoContext) {
+                MongoScope executionScope = ((MongoContext) context)
+                        .getExecutingMongoScope();
+                setParentScope(executionScope);
+            }
         }
-        if(getPrototype() == null) {
+        if (getPrototype() == null) {
             Scriptable classPrototype = ScriptableObject.getClassPrototype(
                     mongoScope, this.getClassName());
             if (classPrototype == null)
@@ -107,13 +112,13 @@ public abstract class ScriptableMongoObject extends ScriptableObject {
     }
 
     /**
-     * Overrides {@link ScriptableObject} to capture the top level {@link MongoScope}
-     * instance in a local member variable.
+     * Overrides {@link ScriptableObject} to capture the top level
+     * {@link MongoScope} instance in a local member variable.
      */
     @Override
     public void setParentScope(Scriptable m) {
         super.setParentScope(m);
-        Scriptable topScope = ScriptableObject.getTopLevelScope(m);
+        Scriptable topScope = ScriptableObject.getTopLevelScope(this);
         if (topScope instanceof MongoScope)
             mongoScope = (MongoScope) topScope;
         else

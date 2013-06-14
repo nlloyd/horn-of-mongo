@@ -21,8 +21,10 @@
  */
 package com.github.nlloyd.hornofmongo.action;
 
+import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ContextAction;
 
+import com.github.nlloyd.hornofmongo.MongoContext;
 import com.github.nlloyd.hornofmongo.MongoScope;
 
 /**
@@ -41,4 +43,30 @@ public abstract class MongoAction implements ContextAction {
 	    return mongoScope;
 	}
 
+    /**
+     * Checks if the given {@link Context} is a {@link MongoContext}. If this is the
+     * case then sets the member {@link MongoScope} as the reference execution scope
+     * for the current action in the {@link MongoContext} (specifically for handling
+     * situations where "new" keyword is not provided with a constructor resulting in
+     * Rhino engine not properly setting parent scope and prototype for a Scriptable 
+     * instance).
+     * 
+     * @see org.mozilla.javascript.ContextAction#run(org.mozilla.javascript.Context)
+     */
+    @Override
+    public Object run(Context cx) {
+        if(cx instanceof MongoContext)
+            ((MongoContext)cx).updateExecutingMongoScope(mongoScope);
+        return doRun(cx);
+    }
+
+    /**
+     * The real {@link MongoAction} execution method.
+     * 
+     * @param cx
+     * @return
+     */
+    protected abstract Object doRun(Context cx);
+
+	
 }

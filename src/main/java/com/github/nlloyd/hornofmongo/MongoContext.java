@@ -19,47 +19,47 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-package com.github.nlloyd.hornofmongo.action;
+package com.github.nlloyd.hornofmongo;
 
 import org.mozilla.javascript.Context;
-import org.mozilla.javascript.Scriptable;
-import org.mozilla.javascript.ScriptableObject;
-
-import com.github.nlloyd.hornofmongo.MongoScope;
+import org.mozilla.javascript.ContextFactory;
 
 /**
+ * Extension and hacky mangling of the {@link Context} type which adds a
+ * reference field to the {@link MongoScope} being executed in the same thread.
+ * The {@link MongoScope} instance is set by the {@link MongoContextFactory}.
+ * When the
+ * {@link MongoContextFactory#call(org.mozilla.javascript.ContextAction)} method
+ * is executed.
+ * 
  * @author nlloyd
- *
+ * 
  */
-public class CallMethodAction extends MongoAction {
-	
-	private Scriptable object;
-	private String method;
-	private Object[] methodArgs;
-	
-	/**
-	 * Constructor for a CallMethodAction that will produce a basic native JS object instance.
-	 */
-	public CallMethodAction(MongoScope mongoScope, Scriptable object, String method) {
-		this(mongoScope, object, method, new Object[]{});
-	}
-	
-	/**
-	 * Constructor for a CallMethodAction that will produce a basic native JS object instance.
-	 */
-	public CallMethodAction(MongoScope mongoScope, Scriptable obj, String method, Object[] args) {
-		super(mongoScope);
-		this.object = obj;
-		this.method = method;
-		this.methodArgs = args;
-	}
-	
-	/**
-	 * @see org.mozilla.javascript.ContextAction#run(org.mozilla.javascript.Context)
-	 */
-	@Override
-	public Object doRun(Context cx) {
-		return ScriptableObject.callMethod(cx, object, method, methodArgs);
-	}
+public class MongoContext extends Context {
+
+    private MongoScope executingMongoScope;
+
+    protected MongoContext(ContextFactory factory) {
+        super(factory);
+    }
+
+    /**
+     * @return the executingMongoScope
+     */
+    public MongoScope getExecutingMongoScope() {
+        return executingMongoScope;
+    }
+
+    /**
+     * Updates the referenced executing {@link MongoScope} if and only if
+     * the new {@link MongoScope} is not null.
+     * 
+     * @param executingMongoScope
+     *            the executingMongoScope to set
+     */
+    public void updateExecutingMongoScope(MongoScope executingMongoScope) {
+        if(executingMongoScope != null)
+            this.executingMongoScope = executingMongoScope;
+    }
 
 }

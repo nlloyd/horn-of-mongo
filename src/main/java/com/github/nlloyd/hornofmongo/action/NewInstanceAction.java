@@ -80,7 +80,7 @@ public class NewInstanceAction extends MongoAction {
 	 * @see org.mozilla.javascript.ContextAction#run(org.mozilla.javascript.Context)
 	 */
 	@Override
-	public Object run(Context cx) {
+	public Object doRun(Context cx) {
 		Object newInstance = null;
 		if(arrayLength > -1) {
 			newInstance = cx.newArray(mongoScope, arrayLength);

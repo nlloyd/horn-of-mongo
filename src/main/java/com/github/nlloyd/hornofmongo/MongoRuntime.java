@@ -104,19 +104,7 @@ public class MongoRuntime {
     public static final Object call(MongoAction mongoAction) {
         if (!ContextFactory.hasExplicitGlobal())
             ContextFactory.initGlobal(new MongoContextFactory());
-        MongoScope scope = mongoAction.getScope();
-        if(scope != null)
-            ContextFactory.getGlobal().addListener(scope);
-        Object result = null;
-        
-        try {
-            result = ContextFactory.getGlobal().call(mongoAction);
-        } finally {
-            if(scope != null)
-                ContextFactory.getGlobal().removeListener(scope);
-        }
-        
-        return result;
+        return ContextFactory.getGlobal().call(mongoAction);
     }
 
 }

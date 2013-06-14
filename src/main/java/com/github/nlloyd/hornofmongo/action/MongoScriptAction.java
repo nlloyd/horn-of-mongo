@@ -100,8 +100,7 @@ public class MongoScriptAction extends MongoAction {
      * @see org.mozilla.javascript.ContextAction#run(org.mozilla.javascript.Context)
      */
     @Override
-    public Object run(Context cx) {
-        // cx.setOptimizationLevel(-1);
+    public Object doRun(Context cx) {
         Object result = null;
         String script;
         if (StringUtils.isNotBlank(scriptString))

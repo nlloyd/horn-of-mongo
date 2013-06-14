@@ -52,22 +52,14 @@ public class MongoContextFactory extends ContextFactory {
     }
 
     /**
-     * Override {@link #hasFeature(Context, int)}
+     * Makes a new {@link MongoContext}.
      * 
-     * Enables {@link Context#FEATURE_LOCATION_INFORMATION_IN_ERROR}
-     * and {@link Context#FEATURE_DYNAMIC_SCOPE}.
-     * 
-     * Only {@link Context#FEATURE_DYNAMIC_SCOPE} is important, for DBRef types.
+     * @see org.mozilla.javascript.ContextFactory#makeContext()
      */
-//    @Override
-//    public boolean hasFeature(Context cx, int featureIndex) {
-//        switch (featureIndex) {
-//        case FEATURE_LOCATION_INFORMATION_IN_ERROR:
-//        case FEATURE_DYNAMIC_SCOPE:
-//        case VERSION_1_8:
-//            return true;
-//        }
-//        return super.hasFeature(cx, featureIndex);
-//    }
+    @Override
+    protected Context makeContext() {
+        return new MongoContext(this);
+    }
 
+    
 }

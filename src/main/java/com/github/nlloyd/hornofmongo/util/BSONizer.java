@@ -61,6 +61,7 @@ import com.github.nlloyd.hornofmongo.adaptor.NumberLong;
 import com.github.nlloyd.hornofmongo.adaptor.ObjectId;
 import com.github.nlloyd.hornofmongo.adaptor.ScriptableMongoObject;
 import com.github.nlloyd.hornofmongo.adaptor.Timestamp;
+import com.github.nlloyd.hornofmongo.exception.MongoScopeException;
 import com.mongodb.BasicDBObject;
 import com.mongodb.Bytes;
 
@@ -101,14 +102,19 @@ public class BSONizer {
                 bson.put(key.toString(), convertJStoBSON(value, isJsObj));
             }
         } else if (jsObject instanceof ScriptableMongoObject) {
-            bsonObject = convertScriptableMongoToBSON((ScriptableMongoObject)jsObject, isJsObj);
+            bsonObject = convertScriptableMongoToBSON(
+                    (ScriptableMongoObject) jsObject, isJsObj);
         } else if (jsObject instanceof BaseFunction) {
-            BaseFunction funcObject = (BaseFunction)jsObject;
-            Object classPrototype = ScriptableObject.getClassPrototype(funcObject, funcObject.getFunctionName());
-            if((classPrototype instanceof MinKey) || (classPrototype instanceof MaxKey)) {
-                // this is a special case handler for instances where MinKey or MaxKey are provided without explicit constructor calls
+            BaseFunction funcObject = (BaseFunction) jsObject;
+            Object classPrototype = ScriptableObject.getClassPrototype(
+                    funcObject, funcObject.getFunctionName());
+            if ((classPrototype instanceof MinKey)
+                    || (classPrototype instanceof MaxKey)) {
+                // this is a special case handler for instances where MinKey or
+                // MaxKey are provided without explicit constructor calls
                 // index_check3.js does this
-                bsonObject = convertScriptableMongoToBSON((ScriptableMongoObject)classPrototype, isJsObj);
+                bsonObject = convertScriptableMongoToBSON(
+                        (ScriptableMongoObject) classPrototype, isJsObj);
             } else {
                 // comes from eval calls
                 String decompiledCode = (String) MongoRuntime
@@ -122,9 +128,8 @@ public class BSONizer {
             if ("Date".equals(jsClassName)) {
                 bsonObject = Context.jsToJava(jsObject, Date.class);
             } else {
-                // TODO something better than this...
-                System.err.println("bsonizer couldnt convert js class: "
-                        + jsClassName);
+                Context.throwAsScriptRuntimeEx(new MongoScopeException(
+                        "bsonizer couldnt convert js class: " + jsClassName));
                 bsonObject = jsObject;
             }
         } else if (jsObject instanceof ConsString) {
@@ -132,12 +137,13 @@ public class BSONizer {
         } else if (jsObject instanceof Undefined) {
             bsonObject = jsObject;
         } else if (jsObject instanceof Integer) {
-            // this may seem strange, but JavaScript only knows about the number type
+            // this may seem strange, but JavaScript only knows about the number
+            // type
             // which means in the official client we need to pass a Double
             // this applies to Long and Integer values
-            bsonObject = Double.valueOf((Integer)jsObject);
+            bsonObject = Double.valueOf((Integer) jsObject);
         } else if (jsObject instanceof Long) {
-            bsonObject = Double.valueOf((Long)jsObject);
+            bsonObject = Double.valueOf((Long) jsObject);
         } else {
             bsonObject = jsObject;
         }
@@ -208,35 +214,37 @@ public class BSONizer {
             jsObject = MongoRuntime.call(new NewInstanceAction(mongoScope,
                     "DBPointer", new Object[] { dbPointer.getRef(), oid }));
         } else if (bsonObject instanceof BSONTimestamp) {
-            BSONTimestamp bsonTstamp = (BSONTimestamp)bsonObject;
+            BSONTimestamp bsonTstamp = (BSONTimestamp) bsonObject;
             jsObject = MongoRuntime.call(new NewInstanceAction(mongoScope,
-                    "Timestamp", new Object[]{bsonTstamp.getTime(), bsonTstamp.getInc()}));
+                    "Timestamp", new Object[] { bsonTstamp.getTime(),
+                            bsonTstamp.getInc() }));
         } else if (bsonObject instanceof Long) {
             jsObject = MongoRuntime.call(new NewInstanceAction(mongoScope,
                     "NumberLong"));
             ((NumberLong) jsObject).setRealLong((Long) bsonObject);
         } else if (bsonObject instanceof Integer) {
-            jsObject = Double.valueOf((Integer)bsonObject);
+            jsObject = Double.valueOf((Integer) bsonObject);
         } else if (bsonObject instanceof Code) {
             jsObject = ((Code) bsonObject).getCode();
         } else if (bsonObject instanceof byte[]) {
-	        jsObject = MongoRuntime.call(new NewInstanceAction(mongoScope,
-			        "BinData"));
-	        ((BinData)jsObject).setValues(0, (byte[])bsonObject);
+            jsObject = MongoRuntime.call(new NewInstanceAction(mongoScope,
+                    "BinData"));
+            ((BinData) jsObject).setValues(0, (byte[]) bsonObject);
         } else if (bsonObject instanceof Binary) {
-	        jsObject = MongoRuntime.call(new NewInstanceAction(mongoScope,
-			        "BinData"));
-	        ((BinData)jsObject).setValues(((Binary) bsonObject).getType(), ((Binary) bsonObject).getData());
+            jsObject = MongoRuntime.call(new NewInstanceAction(mongoScope,
+                    "BinData"));
+            ((BinData) jsObject).setValues(((Binary) bsonObject).getType(),
+                    ((Binary) bsonObject).getData());
         } else if (bsonObject instanceof UUID) {
-	        jsObject = MongoRuntime.call(new NewInstanceAction(mongoScope,
-			        "BinData"));
-	        UUID uuid = (UUID)bsonObject;
-	        ByteBuffer dataBuffer = ByteBuffer.allocate(16);
-	        // mongodb wire protocol is little endian
-	        dataBuffer.order(ByteOrder.LITTLE_ENDIAN);
-	        dataBuffer.putLong(uuid.getMostSignificantBits());
-	        dataBuffer.putLong(uuid.getLeastSignificantBits());
-            ((BinData)jsObject).setValues(BSON.B_UUID, dataBuffer.array());
+            jsObject = MongoRuntime.call(new NewInstanceAction(mongoScope,
+                    "BinData"));
+            UUID uuid = (UUID) bsonObject;
+            ByteBuffer dataBuffer = ByteBuffer.allocate(16);
+            // mongodb wire protocol is little endian
+            dataBuffer.order(ByteOrder.LITTLE_ENDIAN);
+            dataBuffer.putLong(uuid.getMostSignificantBits());
+            dataBuffer.putLong(uuid.getLeastSignificantBits());
+            ((BinData) jsObject).setValues(BSON.B_UUID, dataBuffer.array());
         } else {
             jsObject = bsonObject;
         }
@@ -268,17 +276,18 @@ public class BSONizer {
             return value;
         }
     }
-    
+
     @SuppressWarnings("deprecation")
-    private static Object convertScriptableMongoToBSON(ScriptableMongoObject jsMongoObj, boolean isJsObj) {
+    private static Object convertScriptableMongoToBSON(
+            ScriptableMongoObject jsMongoObj, boolean isJsObj) {
         Object bsonObject = null;
         if (jsMongoObj instanceof ObjectId) {
             bsonObject = ((ObjectId) jsMongoObj).getRealObjectId();
         } else if (jsMongoObj instanceof BinData) {
-            BinData binData = (BinData)jsMongoObj;
+            BinData binData = (BinData) jsMongoObj;
             byte type = new Integer(binData.getType()).byteValue();
             byte[] data = binData.getDataBytes();
-            if(type == BSON.B_UUID) {
+            if (type == BSON.B_UUID) {
                 ByteBuffer dataBuffer = ByteBuffer.wrap(data);
                 // mongodb wire protocol is little endian
                 dataBuffer.order(ByteOrder.LITTLE_ENDIAN);
@@ -301,39 +310,41 @@ public class BSONizer {
             bsonObject = new com.mongodb.DBRef(null, jsRef.getNs(), id);
         } else if (jsMongoObj instanceof DBPointer) {
             DBPointer jsPointer = (DBPointer) jsMongoObj;
-            bsonObject = new com.mongodb.DBPointer(jsPointer.getNs(),
-                    jsPointer.getId().getRealObjectId());
+            bsonObject = new com.mongodb.DBPointer(jsPointer.getNs(), jsPointer
+                    .getId().getRealObjectId());
         } else if (jsMongoObj instanceof Timestamp) {
-            bsonObject = convertTimestampToBSONTimestamp((Timestamp)jsMongoObj);
+            bsonObject = convertTimestampToBSONTimestamp((Timestamp) jsMongoObj);
         }
         return bsonObject;
     }
-    
+
     /**
-     *  seconds since epoch, used for Timestamp to BSONTimestamp conversion
+     * seconds since epoch, used for Timestamp to BSONTimestamp conversion
      */
     private static int lastSecFromEpoch;
-    
+
     /**
      * ordinal used for Timestamp to BSONTimestamp conversion
      */
     private static int timestampIncrementer = 1;
-    
-    private static synchronized BSONTimestamp convertTimestampToBSONTimestamp(Timestamp tstamp) {
+
+    private static synchronized BSONTimestamp convertTimestampToBSONTimestamp(
+            Timestamp tstamp) {
         BSONTimestamp bsTstamp;
-        int newTimeInSec = (int)tstamp.getT();
-        if(newTimeInSec == 0) {
-            newTimeInSec = (int)(new Date().getTime() / 1000);
-            // seconds from epoch has changed, reset ordinal and set the new lastSecFromEpoch value
-            if(newTimeInSec != lastSecFromEpoch) {
+        int newTimeInSec = (int) tstamp.getT();
+        if (newTimeInSec == 0) {
+            newTimeInSec = (int) (new Date().getTime() / 1000);
+            // seconds from epoch has changed, reset ordinal and set the new
+            // lastSecFromEpoch value
+            if (newTimeInSec != lastSecFromEpoch) {
                 lastSecFromEpoch = newTimeInSec;
                 timestampIncrementer = 1;
             } else
-                timestampIncrementer++;   
-            bsTstamp =  new BSONTimestamp(lastSecFromEpoch, timestampIncrementer);
+                timestampIncrementer++;
+            bsTstamp = new BSONTimestamp(lastSecFromEpoch, timestampIncrementer);
         } else
-            bsTstamp = new BSONTimestamp(newTimeInSec, (int)tstamp.getI());
-        
+            bsTstamp = new BSONTimestamp(newTimeInSec, (int) tstamp.getI());
+
         return bsTstamp;
     }
 
@@ -351,7 +362,7 @@ public class BSONizer {
         }
 
         @Override
-        public Object run(Context cx) {
+        public Object doRun(Context cx) {
             return ScriptRuntime.setObjectElem(obj, key, value, cx);
         }
 
@@ -367,7 +378,7 @@ public class BSONizer {
         }
 
         @Override
-        public Object run(Context cx) {
+        public Object doRun(Context cx) {
             return cx.decompileFunction(toDecompile, 2);
         }
 
