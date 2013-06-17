@@ -33,6 +33,7 @@ import java.io.StringReader;
 import org.apache.commons.lang3.StringUtils;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ScriptableObject;
+import org.mozilla.javascript.Undefined;
 
 import com.github.nlloyd.hornofmongo.MongoScope;
 import com.mongodb.MongoException;
@@ -101,7 +102,7 @@ public class MongoScriptAction extends MongoAction {
      */
     @Override
     public Object doRun(Context cx) {
-        Object result = null;
+        Object result = Undefined.instance;
         String script;
         if (StringUtils.isNotBlank(scriptString))
             script = scriptString;
@@ -120,6 +121,16 @@ public class MongoScriptAction extends MongoAction {
         boolean wasCmd = false;
         if (isOneLine(script)) {
             script = script.trim();
+            
+            // special handling for: exit[;] and cls
+            if(script.matches("^exit;?$")) {
+                MongoScope.quit(cx, mongoScope, null, null);
+                return result;
+            } else if(script.equals("cls")) {
+                MongoScope.clear(cx, mongoScope, null, null);
+                return result;
+            }
+            
             String cmd = script;
             if (cmd.indexOf(' ') > 0)
                 cmd = script.substring(0, cmd.indexOf(' '));

@@ -80,7 +80,9 @@ import com.github.nlloyd.hornofmongo.adaptor.Timestamp;
 import com.github.nlloyd.hornofmongo.exception.MongoScopeException;
 import com.github.nlloyd.hornofmongo.exception.MongoScriptException;
 import com.github.nlloyd.hornofmongo.util.BSONizer;
+import com.github.nlloyd.hornofmongo.util.ClearHandler;
 import com.github.nlloyd.hornofmongo.util.PrintHandler;
+import com.github.nlloyd.hornofmongo.util.QuitHandler;
 import com.mongodb.BasicDBObjectBuilder;
 import com.mongodb.DBEncoder;
 import com.mongodb.DBObject;
@@ -105,7 +107,7 @@ public class MongoScope extends Global {
 	 * 
 	 */
     private static final long serialVersionUID = 4650743395507077775L;
-    
+
     private static ThreadLocal<Random> threadLocalRandomGen = new ThreadLocal<Random>() {
         protected Random initialValue() {
             return new Random();
@@ -120,6 +122,10 @@ public class MongoScope extends Global {
             "mongodb/shardingtest.js" };
 
     private PrintHandler printHandler;
+
+    private ClearHandler clearHandler;
+
+    private QuitHandler quitHandler;
 
     /**
      * If true then some {@link MongoException} will be caught and the messages
@@ -208,6 +214,36 @@ public class MongoScope extends Global {
     }
 
     /**
+     * @return the clearHandler
+     */
+    public ClearHandler getClearHandler() {
+        return clearHandler;
+    }
+
+    /**
+     * @param clearHandler
+     *            the clearHandler to set
+     */
+    public void setClearHandler(ClearHandler clearHandler) {
+        this.clearHandler = clearHandler;
+    }
+
+    /**
+     * @return the quitHandler
+     */
+    public QuitHandler getQuitHandler() {
+        return quitHandler;
+    }
+
+    /**
+     * @param quitHandler
+     *            the quitHandler to set
+     */
+    public void setQuitHandler(QuitHandler quitHandler) {
+        this.quitHandler = quitHandler;
+    }
+
+    /**
      * @return the cwd
      */
     public File getCwd() {
@@ -247,10 +283,10 @@ public class MongoScope extends Global {
             super.init(context);
         }
 
-        String[] names = { "sleep", "hex_md5", "_isWindows", "_srand",
-                "_rand", "UUID", "MD5", "HexData", "print", "ls", "cd",
-                "mkdir", "pwd", "listFiles", "hostname", "cat", "removeFile",
-                "md5sumFile", "fuzzFile", "run", "runProgram", "getMemInfo" };
+        String[] names = { "quit", "sleep", "hex_md5", "_isWindows", "_srand", "_rand",
+                "UUID", "MD5", "HexData", "print", "ls", "cd", "mkdir", "pwd",
+                "listFiles", "hostname", "cat", "removeFile", "md5sumFile",
+                "fuzzFile", "run", "runProgram", "getMemInfo" };
         defineFunctionProperties(names, this.getClass(),
                 ScriptableObject.DONTENUM);
         ScriptableObject objectPrototype = (ScriptableObject) ScriptableObject
@@ -340,16 +376,16 @@ public class MongoScope extends Global {
         } else
             throw me;
     }
-    
+
     /* --- global and globalish utility functions --- */
 
-//    public static Object eval(Context cx, Scriptable thisObj, Object[] args,
-//            Function funObj) {
-//        final String evalScript = Context.toString(args[0]);
-//        Object result = MongoRuntime.call(new MongoScriptAction(
-//                (MongoScope) thisObj, "(eval)", evalScript));
-//        return result;
-//    }
+    // public static Object eval(Context cx, Scriptable thisObj, Object[] args,
+    // Function funObj) {
+    // final String evalScript = Context.toString(args[0]);
+    // Object result = MongoRuntime.call(new MongoScriptAction(
+    // (MongoScope) thisObj, "(eval)", evalScript));
+    // return result;
+    // }
 
     // public static Object version(Context cx, Scriptable thisObj, Object[]
     // args,
@@ -468,6 +504,39 @@ public class MongoScope extends Global {
         }
 
         return Context.getUndefinedValue();
+    }
+    
+    /**
+     * Call the {@link ClearHandler} or noop.
+     * 
+     * @param cx
+     * @param thisObj
+     * @param args
+     * @param funObj
+     */
+    public static void clear(Context cx, Scriptable thisObj, Object[] args,
+            Function funObj) {
+        if (thisObj instanceof MongoScope) {
+            MongoScope mongoScope = (MongoScope) thisObj;
+            if (mongoScope.getClearHandler() != null)
+                mongoScope.getClearHandler().doClear(cx, thisObj, args);
+        }
+    }
+
+    /**
+     * Call the {@link QuitHandler} or call the default
+     * {@link Global#quit(Context, Scriptable, Object[], Function)}.
+     */
+    public static void quit(Context cx, Scriptable thisObj, Object[] args,
+            Function funObj) {
+        if (thisObj instanceof MongoScope) {
+            MongoScope mongoScope = (MongoScope) thisObj;
+            if (mongoScope.getQuitHandler() != null)
+                mongoScope.getQuitHandler().doQuit(cx, thisObj, args);
+            else
+                Global.quit(cx, thisObj, args, funObj);
+        } else
+            Global.quit(cx, thisObj, args, funObj);
     }
 
     // *** extended shell functions ***
@@ -713,5 +782,5 @@ public class MongoScope extends Global {
         }
 
     }
-    
+
 }
