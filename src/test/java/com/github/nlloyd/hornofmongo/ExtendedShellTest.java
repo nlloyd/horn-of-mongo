@@ -25,10 +25,13 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Hashtable;
@@ -110,10 +113,10 @@ public class ExtendedShellTest {
         MongoRuntime.call(new MongoScriptAction(testScope, "cd('jstests')"));
         assertEquals(new File("jstests").getAbsolutePath(), testScope.getCwd()
                 .getAbsolutePath());
-        MongoRuntime
-                .call(new MongoScriptAction(testScope, "cd('../')"));
-        assertEquals(new File(System.getProperty("user.dir")).getAbsolutePath(), testScope
-                .getCwd().getAbsolutePath());
+        MongoRuntime.call(new MongoScriptAction(testScope, "cd('../')"));
+        assertEquals(
+                new File(System.getProperty("user.dir")).getAbsolutePath(),
+                testScope.getCwd().getAbsolutePath());
     }
 
     @Test
@@ -246,15 +249,61 @@ public class ExtendedShellTest {
         assertFalse(dummyFile.exists());
     }
 
-    // @Test
-    // public void test_md5sumFile() {
-    // fail("Not yet implemented");
-    // }
-    //
-    // @Test
-    // public void test_fuzzFile() {
-    // fail("Not yet implemented");
-    // }
+    @Test
+    public void test_md5sumFile() throws IOException {
+        File dummyFile = new File("md5sumTest.txt");
+        if (dummyFile.exists())
+            dummyFile.delete();
+        BufferedWriter writer = new BufferedWriter(new FileWriter(dummyFile));
+        writer.write("imatest!");
+        writer.close();
+
+        // generated against the file made above using the official shell
+        final String md5sumExpected = "e51f6d6e9dda063436a59df30b17856e";
+
+        String md5sumActual = (String) MongoScope.md5sumFile(null, null,
+                new Object[] { dummyFile.getAbsolutePath() }, null);
+        assertEquals(md5sumExpected, md5sumActual);
+
+        String md5sumActualFromScript = (String) MongoRuntime
+                .call(new MongoScriptAction(testScope, "md5sumFile('"
+                        + dummyFile.getAbsolutePath() + "');"));
+        assertEquals(md5sumExpected, md5sumActualFromScript);
+    }
+
+    @Test
+    public void test_fuzzFile() throws IOException {
+        final int byteToFuzz = 1;
+        final String fileContent = "imatest!";
+        byte[] fileContentBytes = fileContent.getBytes();
+        fileContentBytes[byteToFuzz] = (byte) ~((int) fileContentBytes[byteToFuzz]);
+        final String fuzzedFileContent = new String(fileContentBytes);
+
+        File dummyFile = new File("fuzzFileTest.txt");
+        if (dummyFile.exists())
+            dummyFile.delete();
+        BufferedWriter writer = new BufferedWriter(new FileWriter(dummyFile));
+        writer.write(fileContent);
+        writer.close();
+
+        MongoScope.fuzzFile(null, null,
+                new Object[] { dummyFile.getAbsolutePath(), byteToFuzz }, null);
+
+        BufferedReader reader = new BufferedReader(new FileReader(dummyFile));
+        String fuzzedContent = reader.readLine();
+        reader.close();
+
+        assertEquals(fuzzedFileContent, fuzzedContent);
+
+        MongoRuntime.call(new MongoScriptAction(testScope, "fuzzFile('"
+                + dummyFile.getAbsolutePath() + "', " + byteToFuzz + ");"));
+        
+        reader = new BufferedReader(new FileReader(dummyFile));
+        String unfuzzedContent = reader.readLine();
+        reader.close();
+        
+        assertEquals(fileContent, unfuzzedContent);
+    }
 
     @Test
     public void test_run() {

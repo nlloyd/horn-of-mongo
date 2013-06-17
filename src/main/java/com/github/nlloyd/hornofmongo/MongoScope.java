@@ -670,7 +670,7 @@ public class MongoScope extends Global {
         File toRemove = new File(Context.toString(args[0]));
         return FileUtils.deleteQuietly(toRemove);
     }
-
+    
     public static Object md5sumFile(Context cx, Scriptable thisObj,
             Object[] args, Function funObj) {
         assertSingleArgument(args);
@@ -682,28 +682,34 @@ public class MongoScope extends Global {
         }
         File inFile = new File(Context.toString(args[0]));
         InputStream in = null;
+        DigestInputStream dis = null;
         try {
             in = new BufferedInputStream(new FileInputStream(inFile));
-            DigestInputStream dis = new DigestInputStream(in, md);
+            dis = new DigestInputStream(in, md);
             while (dis.available() > 0)
                 dis.read();
             byte[] digest = md.digest();
-
-            // inline std::string digestToString( md5digest digest ){
-            // static const char * letters = "0123456789abcdef";
-            // stringstream ss;
-            // for ( int i=0; i<16; i++){
-            // unsigned char c = digest[i];
-            // ss << letters[ ( c >> 4 ) & 0xf ] << letters[ c & 0xf ];
-            // }
-            // return ss.str();
-            // }
+            String hexStr = Hex.encodeHexString(digest);
+            return hexStr;
         } catch (FileNotFoundException e) {
             Context.throwAsScriptRuntimeEx(e);
         } catch (IOException e) {
             Context.throwAsScriptRuntimeEx(e);
+        } finally {
+            if(in != null) {
+                try {
+                    in.close();
+                } catch (IOException e) {
+                }
+            }
+            if(dis != null) {
+                try {
+                    dis.close();
+                } catch (IOException e) {
+                }
+            }
         }
-        return null;
+        return Undefined.instance;
     }
 
     public static Object fuzzFile(Context cx, Scriptable thisObj,
@@ -712,8 +718,9 @@ public class MongoScope extends Global {
             Context.throwAsScriptRuntimeEx(new MongoScriptException(
                     "fuzzFile takes 2 arguments"));
         File fileToFuzz = new File(Context.toString(args[0]));
+        RandomAccessFile fuzzFile = null;
         try {
-            RandomAccessFile fuzzFile = new RandomAccessFile(fileToFuzz, "rw");
+            fuzzFile = new RandomAccessFile(fileToFuzz, "rw");
             long fuzzPosition = Double.valueOf(Context.toNumber(args[1]))
                     .longValue();
             fuzzFile.seek(fuzzPosition);
@@ -726,6 +733,13 @@ public class MongoScope extends Global {
             Context.throwAsScriptRuntimeEx(e);
         } catch (IOException e) {
             Context.throwAsScriptRuntimeEx(e);
+        } finally {
+            if(fuzzFile != null) {
+                try {
+                    fuzzFile.close();
+                } catch (IOException e) {
+                }
+            }
         }
 
         return Undefined.instance;
