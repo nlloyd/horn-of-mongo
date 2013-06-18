@@ -56,17 +56,17 @@ public class MongoToStringTest {
     @Test
     public void testSingleHostToString() {
         Object result = MongoRuntime.call(new MongoScriptAction(testScope,
-                "new Mongo('singlehost:27017').toString();"));
+                "new Mongo('127.0.0.1:27017').toString();"));
         String resultStr = Context.toString(result);
-        assertEquals("connection to singlehost:27017", resultStr);
+        assertEquals("connection to 127.0.0.1:27017", resultStr);
     }
 
     @Test
     public void testMultiHostToString() {
         Object result = MongoRuntime.call(new MongoScriptAction(testScope,
-                "new Mongo('randomhost:27017,otherhost:27018').toString();"));
+                "new Mongo('127.0.0.1:27017,127.0.0.1:27018').toString();"));
         String resultStr = Context.toString(result);
-        assertEquals("connection to randomhost:27017,otherhost:27018", resultStr);
+        assertEquals("connection to 127.0.0.1:27017,127.0.0.1:27018", resultStr);
     }
 
 }
