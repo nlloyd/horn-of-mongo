@@ -4,6 +4,8 @@ Horn of Mongo
 
 MongoDB Shell built on the Rhino JavaScript Engine for Java.
 
+Currently tested against mongodb release: <strong>2.4.3</strong>
+
 ## Usage
 
 All actions within the a mongodb-enabled Rhino `Context` happen through `MongoRuntime`.  Before anything can happen, however, you need to first create a `MongoScope` to work from using static methods within `MongoRuntime`.  After you have a `MongoScope` you can execute just about any mongodb script you want from the convenient `MongoRuntime.call(..)` method!
@@ -92,8 +94,13 @@ This test does actually pass, however.
 
 ## Roadmap
 
-[Planned Milestones](https://github.com/nlloyd/horn-of-mongo/issues/milestones)
+[Planned Milestones](https://github.com/nlloyd/horn-of-mongo/issues/milestones)<br/>
 [Issues](https://github.com/nlloyd/horn-of-mongo/issues?labels=&milestone=&page=1&state=open)
+
+
+Show your support by donating!
+
+<a href='http://www.pledgie.com/campaigns/20520'><img alt='Click here to lend your support to: Horn of Mongo and make a donation at www.pledgie.com !' src='http://www.pledgie.com/campaigns/20520.png?skin_name=chrome' border='0' /></a>
 
 ## License
 

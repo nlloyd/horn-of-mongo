@@ -1,12 +1,14 @@
 package com.github.nlloyd.hornofmongo.adaptor;
 
 import static com.mongodb.CoreMongoApiWrapper.callInsert;
+import static com.mongodb.CoreMongoApiWrapper.makeCommandResult;
 
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Scriptable;
@@ -67,9 +69,10 @@ public class Mongo extends ScriptableMongoObject {
         if (host instanceof Undefined)
             this.hosts = Collections.singletonList(new ServerAddress(
                     "localhost", ServerAddress.defaultPort()));
-        else if (host instanceof com.mongodb.Mongo)
+        else if (host instanceof com.mongodb.Mongo) {
             this.innerMongo = (com.mongodb.Mongo) host;
-        else if (host instanceof List<?>)
+            this.hosts = this.innerMongo.getAllAddress();
+        } else if (host instanceof List<?>)
             // TODO check if we get a list of ServerAddresses or something else
             this.hosts = (List<ServerAddress>) host;
         else {
@@ -89,6 +92,18 @@ public class Mongo extends ScriptableMongoObject {
                             .defaultPort()));
             }
         }
+
+        StringBuilder hostStringBuilder = new StringBuilder();
+        if (!(host instanceof Undefined)) {
+            for (ServerAddress serverAddress : this.hosts) {
+                if (hostStringBuilder.length() > 0)
+                    hostStringBuilder.append(",");
+                hostStringBuilder.append(serverAddress.getHost()).append(":")
+                        .append(serverAddress.getPort());
+            }
+        } else
+            hostStringBuilder.append("127.0.0.1");
+        put("host", this, hostStringBuilder.toString());
     }
 
     private void initMongoConnection() throws UnknownHostException {
@@ -167,6 +182,16 @@ public class Mongo extends ScriptableMongoObject {
                         cmdResult);
                 result = MongoRuntime.call(new NewInstanceAction(mongoScope,
                         "InternalCursor", new Object[] { jsCmdResult }));
+            } catch (NoSuchElementException nse) {
+                // thrown when db.runCommand() called (no arguments)
+                CommandResult failedCmdResult = makeCommandResult(this.hosts
+                        .iterator().next());
+                failedCmdResult.put("ok", Boolean.FALSE);
+                failedCmdResult.put("errmsg", "no such cmd: ");
+                Object jsFailedCmdResult = BSONizer.convertBSONtoJS(mongoScope,
+                        failedCmdResult);
+                result = MongoRuntime.call(new NewInstanceAction(mongoScope,
+                        "InternalCursor", new Object[] { jsFailedCmdResult }));
             } catch (MongoException me) {
                 handleMongoException(me);
             }

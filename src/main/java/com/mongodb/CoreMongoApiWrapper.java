@@ -14,5 +14,9 @@ public class CoreMongoApiWrapper extends DBApiLayer {
     public static WriteResult callInsert(DBCollection collection, List<DBObject> list, boolean shouldApply) {
         return ((MyCollection)collection).insert(list, false, collection.getWriteConcern(), FACTORY.create());
     }
+    
+    public static CommandResult makeCommandResult(ServerAddress serverAddress) {
+        return new CommandResult(serverAddress);
+    }
 
 }
