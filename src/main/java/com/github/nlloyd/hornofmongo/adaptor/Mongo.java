@@ -34,6 +34,7 @@ import com.mongodb.MongoClientURI;
 import com.mongodb.MongoException;
 import com.mongodb.ServerAddress;
 import com.mongodb.WriteConcern;
+import com.mongodb.MongoOptions;
 
 /**
  * JavaScript host Mongo object that acts as an adaptor between the JavaScript
@@ -57,6 +58,7 @@ public class Mongo extends ScriptableMongoObject {
     protected com.mongodb.Mongo innerMongo;
 
     protected List<ServerAddress> hosts;
+	protected MongoOptions mongoOptions;
 
     public Mongo() throws UnknownHostException {
         super();
@@ -108,9 +110,22 @@ public class Mongo extends ScriptableMongoObject {
 
     private void initMongoConnection() throws UnknownHostException {
         if ((innerMongo == null) || !innerMongo.getConnector().isOpen()) {
-            MongoClientOptions clientOptions = MongoClientOptions.builder()
-                    .dbEncoderFactory(HornOfMongoBSONEncoder.FACTORY).build();
-            this.innerMongo = new com.mongodb.MongoClient(this.hosts,
+	        MongoClientOptions.Builder builder = MongoClientOptions.builder();
+	        if (mongoOptions != null) {
+		        //Restore previous options
+		        builder.description(mongoOptions.description);
+		        builder.connectionsPerHost(mongoOptions.connectionsPerHost);
+		        builder.threadsAllowedToBlockForConnectionMultiplier(mongoOptions.threadsAllowedToBlockForConnectionMultiplier);
+		        builder.maxWaitTime(mongoOptions.maxWaitTime);
+		        builder.connectTimeout(mongoOptions.connectTimeout);
+		        builder.socketTimeout(mongoOptions.socketTimeout);
+		        builder.socketKeepAlive(mongoOptions.socketKeepAlive);
+		        builder.autoConnectRetry(mongoOptions.autoConnectRetry);
+		        builder.maxAutoConnectRetryTime(mongoOptions.maxAutoConnectRetryTime);
+	        }
+	        MongoClientOptions clientOptions = builder
+			        .dbEncoderFactory(HornOfMongoBSONEncoder.FACTORY).build();
+	        this.innerMongo = new com.mongodb.MongoClient(this.hosts,
                     clientOptions);
         }
         if (mongoScope.useMongoShellWriteConcern())
@@ -310,8 +325,13 @@ public class Mongo extends ScriptableMongoObject {
         // since the java driver does not support multiple calls to
         // db.authenticateCommand()
         if (db.isAuthenticated()) {
+	        if (hosts == null) {
+		        //Save hosts and options for reconstruction after close
+		        hosts = innerMongo.getServerAddressList();
+		        mongoOptions = innerMongo.getMongoOptions();
+            }
             close();
-            try {
+	        try {
                 initMongoConnection();
             } catch (UnknownHostException e) {
                 // we should never get here

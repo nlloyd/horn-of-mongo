@@ -108,14 +108,25 @@ public class ExtendedShellTest {
     }
 
     @Test
-    public void test_cd() {
+    public void test_cd() throws IOException {
         MongoRuntime.call(new MongoScriptAction(testScope, "cd('jstests')"));
-        assertEquals(new File("jstests").getAbsolutePath(), testScope.getCwd()
-                .getAbsolutePath());
+        assertEquals(new File("jstests").getCanonicalPath(), testScope.getCwd()
+                .getCanonicalPath());
         MongoRuntime.call(new MongoScriptAction(testScope, "cd('../')"));
         assertEquals(
-                new File(System.getProperty("user.dir")).getAbsolutePath(),
-                testScope.getCwd().getAbsolutePath());
+                new File(System.getProperty("user.dir")).getCanonicalPath(),
+                testScope.getCwd().getCanonicalPath());
+        // now with an absolute path
+        File absPath = new File(System.getProperty("user.dir"), "jstests");
+        MongoRuntime.call(new MongoScriptAction(testScope, "cd('"
+                + absPath.getCanonicalPath() + "')"));
+        assertEquals(new File("jstests").getCanonicalPath(), testScope.getCwd()
+                .getCanonicalPath());
+        MongoRuntime.call(new MongoScriptAction(testScope, "cd('"
+                + absPath.getParentFile().getCanonicalPath() + "')"));
+        assertEquals(
+                new File(System.getProperty("user.dir")).getCanonicalPath(),
+                testScope.getCwd().getCanonicalPath());
     }
 
     @Test
@@ -296,11 +307,11 @@ public class ExtendedShellTest {
 
         MongoRuntime.call(new MongoScriptAction(testScope, "fuzzFile('"
                 + dummyFile.getAbsolutePath() + "', " + byteToFuzz + ");"));
-        
+
         reader = new BufferedReader(new FileReader(dummyFile));
         String unfuzzedContent = reader.readLine();
         reader.close();
-        
+
         assertEquals(fileContent, unfuzzedContent);
     }
 

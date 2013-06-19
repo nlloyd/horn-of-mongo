@@ -45,6 +45,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.binary.Base64;
@@ -283,10 +284,11 @@ public class MongoScope extends Global {
             super.init(context);
         }
 
-        String[] names = { "quit", "sleep", "hex_md5", "_isWindows", "_srand", "_rand",
-                "UUID", "MD5", "HexData", "print", "ls", "cd", "mkdir", "pwd",
-                "listFiles", "hostname", "cat", "removeFile", "md5sumFile",
-                "fuzzFile", "run", "runProgram", "getMemInfo" };
+        String[] names = { "quit", "sleep", "hex_md5", "_isWindows", "_srand",
+                "_rand", "UUID", "MD5", "HexData", "print", "ls", "cd",
+                "mkdir", "pwd", "listFiles", "hostname", "cat", "removeFile",
+                "md5sumFile", "fuzzFile", "run", "runProgram", "getMemInfo",
+                "load" };
         defineFunctionProperties(names, this.getClass(),
                 ScriptableObject.DONTENUM);
         ScriptableObject objectPrototype = (ScriptableObject) ScriptableObject
@@ -505,7 +507,7 @@ public class MongoScope extends Global {
 
         return Context.getUndefinedValue();
     }
-    
+
     /**
      * Call the {@link ClearHandler} or noop.
      * 
@@ -544,13 +546,15 @@ public class MongoScope extends Global {
     public static Object ls(Context cx, Scriptable thisObj, Object[] args,
             Function funObj) {
         File path = null;
+        MongoScope mongoScope = (MongoScope) thisObj;
         if (args.length == 0)
-            path = ((MongoScope) thisObj).getCwd();
+            path = mongoScope.getCwd();
         else if (args.length > 1)
             Context.throwAsScriptRuntimeEx(new MongoScriptException(
                     "need to specify 1 argument to listFiles"));
         else
-            path = new File(Context.toString(args[0]));
+            path = new File(Context
+                    .toString(args[0]));
 
         // mongo only checks if the path exists, so we will do the same here
         // official mongo has ls() call listFiles()... im not doing that here
@@ -580,27 +584,40 @@ public class MongoScope extends Global {
             Function funObj) {
         assertSingleArgument(args);
         MongoScope mongoScope = (MongoScope) thisObj;
-        String dirPath = Context.toString(args[0]);
+        String newDirPath = Context.toString(args[0]);
         File cwd = mongoScope.getCwd();
-        if (dirPath.startsWith("../")) {
-            cwd = cwd.getAbsoluteFile().getParentFile();
-            dirPath = dirPath.substring(3);
-            cwd = new File(cwd, dirPath);
+        File newCwd;
+        // if this is a relative path, use cwd instead of system property user.dir
+        Pattern.compile("");
+        if(newDirPath.matches("^(/|([a-zA-Z]{1}:\\\\)).*$"))
+            newCwd = new File(newDirPath);
+        else
+            newCwd = new File(cwd, newDirPath);
+        String result = null;
+        if (newCwd.isDirectory()) {
+            try {
+                mongoScope.setCwd(newCwd.getCanonicalFile());
+            } catch (IOException e) {
+                result = "change directory failed: " + e.getMessage();
+            }
         } else
-            cwd = new File(dirPath);
-        if (cwd.isDirectory()) {
-            mongoScope.setCwd(cwd);
-            return null;
-        } else
-            return "change directory failed";
+            result = "change directory failed";
+        return result;
     }
 
     public static Object mkdir(Context cx, Scriptable thisObj, Object[] args,
             Function funObj) {
         assertSingleArgument(args);
-        File newDir = new File(Context.toString(args[0]));
+        boolean success = false;
+        File newDir;
+        try {
+            newDir = new File(Context
+                    .toString(args[0])).getCanonicalFile();
+            success = newDir.mkdirs();
+        } catch (IOException e) {
+        }
         // despite what the official shell does, i want to return if this fails
-        return newDir.mkdirs();
+        return success;
     }
 
     public static Object pwd(Context cx, Scriptable thisObj, Object[] args,
@@ -617,8 +634,9 @@ public class MongoScope extends Global {
             Context.throwAsScriptRuntimeEx(new MongoScriptException(
                     "need to specify 1 argument to listFiles"));
         else
-            path = new File(Context.toString(args[0]));
-
+            path = new File(Context
+                    .toString(args[0]));
+        
         // mongo only checks if the path exists, so we will do the same here
         if (!path.exists())
             Context.throwAsScriptRuntimeEx(new MongoScriptException(
@@ -657,7 +675,7 @@ public class MongoScope extends Global {
         assertSingleArgument(args);
         try {
             return FileUtils.readFileToString(new File(Context
-                    .toString(args[0])));
+                    .toString(args[0])).getAbsoluteFile());
         } catch (IOException e) {
             Context.throwAsScriptRuntimeEx(e);
             return Undefined.instance;
@@ -667,10 +685,16 @@ public class MongoScope extends Global {
     public static Object removeFile(Context cx, Scriptable thisObj,
             Object[] args, Function funObj) {
         assertSingleArgument(args);
-        File toRemove = new File(Context.toString(args[0]));
-        return FileUtils.deleteQuietly(toRemove);
+        boolean success = false;
+        File toRemove;
+        try {
+            toRemove = new File(Context.toString(args[0])).getCanonicalFile();
+            success = FileUtils.deleteQuietly(toRemove);
+        } catch (IOException e) {
+        }
+        return success;
     }
-    
+
     public static Object md5sumFile(Context cx, Scriptable thisObj,
             Object[] args, Function funObj) {
         assertSingleArgument(args);
@@ -680,7 +704,13 @@ public class MongoScope extends Global {
         } catch (NoSuchAlgorithmException e) {
             Context.throwAsScriptRuntimeEx(e);
         }
-        File inFile = new File(Context.toString(args[0]));
+        File inFile;
+        try {
+            inFile = new File(Context.toString(args[0])).getCanonicalFile();
+        } catch (IOException e) {
+            Context.throwAsScriptRuntimeEx(e);
+            return null;
+        }
         InputStream in = null;
         DigestInputStream dis = null;
         try {
@@ -696,13 +726,13 @@ public class MongoScope extends Global {
         } catch (IOException e) {
             Context.throwAsScriptRuntimeEx(e);
         } finally {
-            if(in != null) {
+            if (in != null) {
                 try {
                     in.close();
                 } catch (IOException e) {
                 }
             }
-            if(dis != null) {
+            if (dis != null) {
                 try {
                     dis.close();
                 } catch (IOException e) {
@@ -717,7 +747,13 @@ public class MongoScope extends Global {
         if (args.length != 2)
             Context.throwAsScriptRuntimeEx(new MongoScriptException(
                     "fuzzFile takes 2 arguments"));
-        File fileToFuzz = new File(Context.toString(args[0]));
+        File fileToFuzz;
+        try {
+            fileToFuzz = new File(Context.toString(args[0])).getCanonicalFile();
+        } catch (IOException e) {
+            Context.throwAsScriptRuntimeEx(new MongoScriptException(e));
+            return null;
+        }
         RandomAccessFile fuzzFile = null;
         try {
             fuzzFile = new RandomAccessFile(fileToFuzz, "rw");
@@ -734,7 +770,7 @@ public class MongoScope extends Global {
         } catch (IOException e) {
             Context.throwAsScriptRuntimeEx(e);
         } finally {
-            if(fuzzFile != null) {
+            if (fuzzFile != null) {
                 try {
                     fuzzFile.close();
                 } catch (IOException e) {
@@ -797,4 +833,33 @@ public class MongoScope extends Global {
 
     }
 
+    private static Reader loadFile(MongoScope scope, String filePath)
+            throws FileNotFoundException {
+        Reader reader = null;
+        File file = new File(filePath);
+        reader = new BufferedReader(new InputStreamReader(new FileInputStream(
+                file)));
+        return reader;
+    }
+
+    /**
+     * Load and execute a set of JavaScript source files.
+     * 
+     * Overrides Global.load()
+     * 
+     */
+    public static void load(Context cx, Scriptable thisObj, Object[] args,
+            Function funObj) {
+        for (int i = 0; i < args.length; i++) {
+            String filename = Context.toString(args[i]);
+            try {
+                cx.evaluateReader(thisObj,
+                        loadFile((MongoScope) thisObj, filename), filename, 0,
+                        null);
+            } catch (Exception e) {
+                throw new MongoScopeException("error loading js file: "
+                        + filename, e);
+            }
+        }
+    }
 }
