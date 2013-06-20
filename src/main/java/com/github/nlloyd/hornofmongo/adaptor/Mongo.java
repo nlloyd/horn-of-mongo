@@ -74,6 +74,7 @@ public class Mongo extends ScriptableMongoObject {
         else if (host instanceof com.mongodb.Mongo) {
             this.innerMongo = (com.mongodb.Mongo) host;
             this.hosts = this.innerMongo.getAllAddress();
+            this.mongoOptions = this.innerMongo.getMongoOptions();
         } else if (host instanceof List<?>)
             // TODO check if we get a list of ServerAddresses or something else
             this.hosts = (List<ServerAddress>) host;
