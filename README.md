@@ -92,13 +92,21 @@ This test does actually pass, however.
 
 ## Changelog
 
+### v1.0
+
+First release!  Highly compatible release with mongodb version 2.4.3 (see Known Limitations).
+
 ## Roadmap
 
 [Planned Milestones](https://github.com/nlloyd/horn-of-mongo/issues/milestones)<br/>
 [Issues](https://github.com/nlloyd/horn-of-mongo/issues?labels=&milestone=&page=1&state=open)
 
+## Contributors
 
-Show your support by donating!
+<a href="http://www.aquafold.com"><img src="http://www.aquafold.com/images/s_aquadatastudio_130x34.gif" /></a>  AquaFold, patch contributors, horn-of-mongo is the core engine behind the MongoDB features in their upcoming release.
+
+<br/>
+<strong>Show your support by donating!</strong>
 
 <a href='http://www.pledgie.com/campaigns/20520'><img alt='Click here to lend your support to: Horn of Mongo and make a donation at www.pledgie.com !' src='http://www.pledgie.com/campaigns/20520.png?skin_name=chrome' border='0' /></a>
 
