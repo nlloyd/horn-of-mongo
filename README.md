@@ -92,6 +92,10 @@ This test does actually pass, however.
 
 ## Changelog
 
+### v1.1
+
+Updated and tested against mongodb version 2.4.4
+
 ### v1.0
 
 First release!  Highly compatible release with mongodb version 2.4.3 (see Known Limitations).
