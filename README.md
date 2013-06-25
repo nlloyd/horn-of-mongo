@@ -4,7 +4,7 @@ Horn of Mongo
 
 MongoDB Shell built on the Rhino JavaScript Engine for Java.
 
-Currently tested against mongodb release: <strong>2.4.3</strong>
+Currently tested against mongodb release: <strong>2.4.4</strong>
 
 ## Usage
 

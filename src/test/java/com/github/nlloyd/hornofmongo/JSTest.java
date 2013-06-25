@@ -64,7 +64,7 @@ import de.flapdoodle.embed.process.runtime.ICommandLinePostProcessor;
 @RunWith(Parameterized.class)
 public class JSTest {
 
-    private static final String MONGOD_VERSION = "2.4.3";
+    private static final String MONGOD_VERSION = "2.4.4";
 
     private static File cwd = null;
 
