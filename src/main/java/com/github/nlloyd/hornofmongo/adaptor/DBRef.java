@@ -23,11 +23,12 @@ package com.github.nlloyd.hornofmongo.adaptor;
 
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Scriptable;
+import org.mozilla.javascript.Undefined;
 import org.mozilla.javascript.annotations.JSConstructor;
 
 /**
  * @author nlloyd
- *
+ * 
  */
 public class DBRef extends ScriptableMongoObject {
 
@@ -35,21 +36,35 @@ public class DBRef extends ScriptableMongoObject {
      * 
      */
     private static final long serialVersionUID = 7845123364974187876L;
-    
+
     private String ns;
     private Object id;
-    
+
     public DBRef() {
         super();
     }
-    
+
     @JSConstructor
-    public DBRef(String ref, Object id) {
+    public DBRef(Object ref, Object id) {
         super();
-        this.ns = ref;
+        if (!(ref instanceof String))
+            Context.throwAsScriptRuntimeEx(new IllegalArgumentException(
+                    "Error: DBRef 1st parameter must be a string"));
+        if ((ref instanceof Undefined) || (id instanceof Undefined))
+            Context.throwAsScriptRuntimeEx(new IllegalArgumentException(
+                    "Error: DBRef needs 2 arguments"));
+        this.ns = Context.toString(ref);
         this.id = id;
         put("$ref", this, ref);
         put("$id", this, id);
+    }
+
+    @JSConstructor
+    public DBRef(Object ref, Object id, Object invalid) {
+        this(ref, id);
+        if (!(invalid instanceof Undefined))
+            Context.throwAsScriptRuntimeEx(new IllegalArgumentException(
+                    "Error: DBRef needs 2 arguments"));
     }
 
     /**
@@ -68,7 +83,8 @@ public class DBRef extends ScriptableMongoObject {
     }
 
     /**
-     * @param ns the ns to set
+     * @param ns
+     *            the ns to set
      */
     public void setNs(String ns) {
         this.ns = ns;
@@ -83,21 +99,25 @@ public class DBRef extends ScriptableMongoObject {
     }
 
     /**
-     * @param id the id to set
+     * @param id
+     *            the id to set
      */
     public void setId(Object id) {
         this.id = id;
         put("$id", this, id);
     }
 
-    /* (non-Javadoc)
-     * @see org.mozilla.javascript.ScriptableObject#put(java.lang.String, org.mozilla.javascript.Scriptable, java.lang.Object)
+    /*
+     * (non-Javadoc)
+     * 
+     * @see org.mozilla.javascript.ScriptableObject#put(java.lang.String,
+     * org.mozilla.javascript.Scriptable, java.lang.Object)
      */
     @Override
     public void put(String name, Scriptable start, Object value) {
-        if("$id".equals(name))
+        if ("$id".equals(name))
             this.id = value;
-        else if("$ref".equals(name))
+        else if ("$ref".equals(name))
             this.ns = Context.toString(value);
         super.put(name, start, value);
     }

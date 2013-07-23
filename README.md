@@ -4,7 +4,7 @@ Horn of Mongo
 
 MongoDB Shell built on the Rhino JavaScript Engine for Java.
 
-Currently tested against mongodb release: <strong>2.4.4</strong>
+Currently tested against mongodb release: <strong>2.4.5</strong>
 
 ## Usage
 
@@ -71,7 +71,6 @@ unsupported MongoRunner js class.
 * **_memory.js_** is excluded because it is testing the mongod rather than the
 client api behavior (and it takes a while to run on slower machines).
 This test does actually pass, however.
-* **_fts_blogwild.js_** and **_fts_mix.js_** excluded for now due to invalid operator: $** issue https://jira.mongodb.org/browse/JAVA-814
 * **_remove_justone.js_** excluded until the mongo java driver supports that feature: https://jira.mongodb.org/browse/JAVA-759
 * **_basicc.js_**, **_bench_test1.js_**
 **_bench_test2.js_**, **_bench_test3.js_**
@@ -91,6 +90,13 @@ This test does actually pass, however.
 **_shellspawn.js_**, and **_updatef.js_** are excluded because they rely on the following functions `startMongoProgramNoConnect()` and `startParallelShell()` which there are no plans to implement
 
 ## Changelog
+
+### v1.2
+
+Updated and tested against mongodb version 2.4.5
+Upgraded to use mongo-java-driver 2.11.2
+**_fts_blogwild.js_** and **_fts_mix.js_** included in test suite,  https://jira.mongodb.org/browse/JAVA-814 resolved in latest mongo-java-driver release
+Improved exception handling in several adaptor class constructors
 
 ### v1.1
 

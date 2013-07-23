@@ -21,6 +21,8 @@
  */
 package com.github.nlloyd.hornofmongo.adaptor;
 
+import org.mozilla.javascript.Context;
+import org.mozilla.javascript.Undefined;
 import org.mozilla.javascript.annotations.JSConstructor;
 import org.mozilla.javascript.annotations.JSGetter;
 import org.mozilla.javascript.annotations.JSSetter;
@@ -44,12 +46,27 @@ public class DBPointer extends ScriptableMongoObject {
     }
     
     @JSConstructor
-    public DBPointer(String ns, ObjectId id) {
+    public DBPointer(Object ns, Object id) {
         super();
-        this.ns = ns;
-        this.id = id;
-//        put("ns", this, ns);
-//        put("id", this, id);
+        if (!(ns instanceof String))
+            Context.throwAsScriptRuntimeEx(new IllegalArgumentException(
+                    "Error: DBPointer 1st parameter must be a string"));
+        if (!(id instanceof ObjectId))
+            Context.throwAsScriptRuntimeEx(new IllegalArgumentException(
+                    "DBPointer 2nd parameter must be an ObjectId"));
+        if ((ns instanceof Undefined) || (id instanceof Undefined))
+            Context.throwAsScriptRuntimeEx(new IllegalArgumentException(
+                    "Error: DBPointer needs 2 arguments"));
+        this.ns = Context.toString(ns);
+        this.id = (ObjectId)id;
+    }
+
+    @JSConstructor
+    public DBPointer(Object ns, Object id, Object invalid) {
+        this(ns, id);
+        if (!(invalid instanceof Undefined))
+            Context.throwAsScriptRuntimeEx(new IllegalArgumentException(
+                    "Error: DBPointer needs 2 arguments"));
     }
 
     /**

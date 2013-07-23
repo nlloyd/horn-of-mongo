@@ -48,10 +48,18 @@ public class BinData extends ScriptableMongoObject {
     @JSConstructor
     public BinData(int type, Object obj) {
         super();
-        if(!(obj instanceof Undefined))
+        if (!(obj instanceof Undefined))
             setValues(type, obj);
     }
-    
+
+    @JSConstructor
+    public BinData(int type, Object obj, Object invalid) {
+        this(type, obj);
+        if (!(invalid instanceof Undefined))
+            Context.throwAsScriptRuntimeEx(new IllegalArgumentException(
+                    "Error: BinData takes 2 arguments -- BinData(subtype,data)"));
+    }
+
     public void setValues(int type, Object obj) {
         // carried over from sm_db.cpp, not v8_db.cpp which doesn't have this
         // check for some reason
@@ -60,9 +68,9 @@ public class BinData extends ScriptableMongoObject {
                     "invalid BinData subtype -- range is 0..255 see bsonspec.org");
         }
         this.type = type;
-        byte[] tmpData = new byte[]{};
-        if(obj instanceof byte[]) {
-            tmpData = (byte[])obj;
+        byte[] tmpData = new byte[] {};
+        if (obj instanceof byte[]) {
+            tmpData = (byte[]) obj;
             this.data = Base64.encodeBase64String(tmpData);
         } else {
             this.data = Context.toString(obj);
@@ -104,7 +112,7 @@ public class BinData extends ScriptableMongoObject {
         return data;
     }
 
-	public byte[] getDataBytes() {
-		return Base64.decodeBase64(this.data);
-	}
+    public byte[] getDataBytes() {
+        return Base64.decodeBase64(this.data);
+    }
 }

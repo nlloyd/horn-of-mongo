@@ -64,7 +64,7 @@ import de.flapdoodle.embed.process.runtime.ICommandLinePostProcessor;
 @RunWith(Parameterized.class)
 public class JSTest {
 
-    private static final String MONGOD_VERSION = "2.4.4";
+    private static final String MONGOD_VERSION = "2.4.5";
 
     private static File cwd = null;
 
@@ -91,11 +91,13 @@ public class JSTest {
      * client api behavior (and it takes a while to run on slower machines).
      * This test does actually pass, however.
      * 
-     * fts_blogwild.js and fts_mix.js excluded for now due to invalid operator:
-     * $** issue https://jira.mongodb.org/browse/JAVA-814
-     * 
      * remove_justone.js excluded until the mongo java driver supports that
      * feature: https://jira.mongodb.org/browse/JAVA-759
+     *
+     * dbref3.js excluded until mongo java driver follows the DBRef spec,
+     * currently only a naive check for $ref and $id fields is made which is
+     * incorrect 
+     * jira issue for tracking: 
      * 
      */
     public static final List<String> excludedTests = Arrays
@@ -110,9 +112,8 @@ public class JSTest {
                     "orm.js", "orn.js", "queryoptimizer3.js",
                     "queryoptimizer5.js", "remove9.js", "removeb.js",
                     "removec.js", "shellkillop.js", "shellstartparallel.js",
-                    "shellspawn.js", "updatef.js", "fts_blogwild.js",
-                    "fts_mix.js", "run_program1.js", "indexOtherNamespace.js",
-                    "remove_justone.js" });
+                    "shellspawn.js", "updatef.js", "run_program1.js",
+                    "indexOtherNamespace.js", "remove_justone.js", "dbref3.js" });
 
     /**
      * Tests that throw an expected exception (whether by design or observed but

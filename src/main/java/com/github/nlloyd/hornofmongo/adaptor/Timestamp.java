@@ -36,12 +36,12 @@ public class Timestamp extends ScriptableMongoObject {
      * 
      */
     private static final long serialVersionUID = 4063412321929267268L;
-    
+
     /**
      * seconds between 1970 and 2038
      */
     public static final long largestVal = ((2039l - 1970l) * 365l * 24l * 60l * 60l);
-    
+
     private long t;
     private long i;
 
@@ -56,12 +56,27 @@ public class Timestamp extends ScriptableMongoObject {
     @JSConstructor
     public Timestamp(Object t, Object i) {
         super();
-        if (t instanceof Undefined) {
+        if ((t instanceof Undefined) && (i instanceof Undefined)) {
             this.t = 0l;
             this.i = 0l;
+        } else if ((t instanceof Undefined) || (i instanceof Undefined)) {
+            Context.throwAsScriptRuntimeEx(new IllegalArgumentException(
+                    "Error: Timestamp needs 0 or 2 arguments"));
         } else {
-            Number tNum = NumberUtils.createNumber(Context.toString(t));
-            Number iNum = NumberUtils.createNumber(Context.toString(i));
+            Number tNum = null;
+            Number iNum = null;
+            try {
+                tNum = NumberUtils.createNumber(Context.toString(t));
+            } catch (NumberFormatException nfe) {
+                Context.throwAsScriptRuntimeEx(new IllegalArgumentException(
+                        "Error: Timestamp time must be a number"));
+            }
+            try {
+                iNum = NumberUtils.createNumber(Context.toString(i));
+            } catch (NumberFormatException nfe) {
+                Context.throwAsScriptRuntimeEx(new IllegalArgumentException(
+                        "Error: Timestamp increment must be a number"));
+            }
             if (tNum.longValue() > largestVal)
                 throw new IllegalArgumentException(
                         "The first argument must be in seconds;" + t.toString()
@@ -71,6 +86,14 @@ public class Timestamp extends ScriptableMongoObject {
         }
         put("t", this, this.t);
         put("i", this, this.i);
+    }
+
+    @JSConstructor
+    public Timestamp(Object t, Object i, Object invalid) {
+        this(t, i);
+        if (!(invalid instanceof Undefined))
+            Context.throwAsScriptRuntimeEx(new IllegalArgumentException(
+                    "Error: Timestamp needs 0 or 2 arguments"));
     }
 
     /**
@@ -88,5 +111,5 @@ public class Timestamp extends ScriptableMongoObject {
     public long getI() {
         return i;
     }
-    
+
 }
