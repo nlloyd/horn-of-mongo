@@ -333,8 +333,9 @@ public class MongoScope extends Global {
 
     protected Reader loadFromClasspath(String filePath) {
         Reader reader = null;
+        ClassLoader loader = this.getClass().getClassLoader();
         reader = new BufferedReader(new InputStreamReader(
-                ClassLoader.getSystemResourceAsStream(filePath)));
+                loader.getResourceAsStream(filePath)));
         return reader;
     }
 
