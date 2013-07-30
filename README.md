@@ -91,6 +91,10 @@ This test does actually pass, however.
 
 ## Changelog
 
+### v1.2.1
+
+Fixed minor classloader issue.
+
 ### v1.2
 
 Updated and tested against mongodb version 2.4.5
