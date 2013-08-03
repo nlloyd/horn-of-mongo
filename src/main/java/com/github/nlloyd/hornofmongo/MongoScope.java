@@ -45,7 +45,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
-import java.util.regex.Pattern;
 
 import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.binary.Base64;
@@ -78,10 +77,13 @@ import com.github.nlloyd.hornofmongo.adaptor.NumberInt;
 import com.github.nlloyd.hornofmongo.adaptor.NumberLong;
 import com.github.nlloyd.hornofmongo.adaptor.ObjectId;
 import com.github.nlloyd.hornofmongo.adaptor.Timestamp;
+import com.github.nlloyd.hornofmongo.exception.MongoRuntimeException;
 import com.github.nlloyd.hornofmongo.exception.MongoScopeException;
 import com.github.nlloyd.hornofmongo.exception.MongoScriptException;
 import com.github.nlloyd.hornofmongo.util.BSONizer;
 import com.github.nlloyd.hornofmongo.util.ClearHandler;
+import com.github.nlloyd.hornofmongo.util.CurrentDirectoryHandler;
+import com.github.nlloyd.hornofmongo.util.DefaultCurrentDirectoryHandler;
 import com.github.nlloyd.hornofmongo.util.PrintHandler;
 import com.github.nlloyd.hornofmongo.util.QuitHandler;
 import com.mongodb.BasicDBObjectBuilder;
@@ -122,6 +124,8 @@ public class MongoScope extends Global {
             "mongodb/servers_misc.js", "mongodb/servers.js",
             "mongodb/shardingtest.js" };
 
+    private CurrentDirectoryHandler currentDirHandler = new DefaultCurrentDirectoryHandler();
+
     private PrintHandler printHandler;
 
     private ClearHandler clearHandler;
@@ -137,7 +141,7 @@ public class MongoScope extends Global {
      * 
      * Meant to support the same behavior as the official mongodb shell client.
      */
-    private boolean mimicShellExceptionBehavior = false;
+    private boolean stdoutMongoErrorMessages = false;
 
     /**
      * {@link http
@@ -151,11 +155,6 @@ public class MongoScope extends Global {
     private boolean useMongoShellWriteConcern = false;
 
     private Set<Mongo> mongoConnections = synchronizedSet(new HashSet<Mongo>());
-
-    /**
-     * Stored current working directory for handling filesystem operations.
-     */
-    private File cwd = new File(".");
 
     public MongoScope() {
         super();
@@ -171,17 +170,16 @@ public class MongoScope extends Global {
     /**
      * @return the stdoutMongoErrorMessages
      */
-    public boolean isMimicShellExceptionBehavior() {
-        return mimicShellExceptionBehavior;
+    public boolean isStdoutMongoErrorMessages() {
+        return stdoutMongoErrorMessages;
     }
 
     /**
      * @param stdoutMongoErrorMessages
      *            the stdoutMongoErrorMessages to set
      */
-    public void setMimicShellExceptionBehavior(
-            boolean mimicShellExceptionBehavior) {
-        this.mimicShellExceptionBehavior = mimicShellExceptionBehavior;
+    public void setStdoutMongoErrorMessages(boolean stdoutMongoErrorMessages) {
+        this.stdoutMongoErrorMessages = stdoutMongoErrorMessages;
     }
 
     /**
@@ -197,6 +195,21 @@ public class MongoScope extends Global {
      */
     public void setUseMongoShellWriteConcern(boolean useMongoShellWriteConcern) {
         this.useMongoShellWriteConcern = useMongoShellWriteConcern;
+    }
+
+    /**
+     * @return the currentDirHandler
+     */
+    public CurrentDirectoryHandler getCurrentDirHandler() {
+        return currentDirHandler;
+    }
+
+    /**
+     * @param currentDirHandler
+     *            the currentDirHandler to set
+     */
+    public void setCurrentDirHandler(CurrentDirectoryHandler currentDirHandler) {
+        this.currentDirHandler = currentDirHandler;
     }
 
     /**
@@ -248,7 +261,7 @@ public class MongoScope extends Global {
      * @return the cwd
      */
     public File getCwd() {
-        return cwd;
+        return getCurrentDirHandler().getCurrentDirectory();
     }
 
     /**
@@ -256,7 +269,7 @@ public class MongoScope extends Global {
      *            the cwd to set
      */
     public void setCwd(File cwd) {
-        this.cwd = cwd;
+        getCurrentDirHandler().setCurrentDirectory(cwd);
     }
 
     public void addMongoConnection(Mongo mongoConnection) {
@@ -340,7 +353,7 @@ public class MongoScope extends Global {
     }
 
     public void handleMongoException(MongoException me) {
-        if (this.isMimicShellExceptionBehavior()) {
+        if (this.isStdoutMongoErrorMessages()) {
             // check error codes that do NOT result in an exception
             switch (me.getCode()) {
             case 10088: // cannot index parallel arrays [b] [d]
@@ -553,9 +566,14 @@ public class MongoScope extends Global {
         else if (args.length > 1)
             Context.throwAsScriptRuntimeEx(new MongoScriptException(
                     "need to specify 1 argument to listFiles"));
-        else
-            path = new File(Context
-                    .toString(args[0]));
+        else {
+            try {
+                path = resolveFilePath(mongoScope, Context.toString(args[0]));
+            } catch (IOException e) {
+                Context.throwAsScriptRuntimeEx(new MongoScriptException(
+                        "listFiles: " + e.getMessage()));
+            }
+        }
 
         // mongo only checks if the path exists, so we will do the same here
         // official mongo has ls() call listFiles()... im not doing that here
@@ -586,23 +604,16 @@ public class MongoScope extends Global {
         assertSingleArgument(args);
         MongoScope mongoScope = (MongoScope) thisObj;
         String newDirPath = Context.toString(args[0]);
-        File cwd = mongoScope.getCwd();
-        File newCwd;
-        // if this is a relative path, use cwd instead of system property user.dir
-        Pattern.compile("");
-        if(newDirPath.matches("^(/|([a-zA-Z]{1}:\\\\)).*$"))
-            newCwd = new File(newDirPath);
-        else
-            newCwd = new File(cwd, newDirPath);
         String result = null;
-        if (newCwd.isDirectory()) {
-            try {
+        try {
+            File newCwd = resolveFilePath(mongoScope, newDirPath);
+            if (newCwd.isDirectory()) {
                 mongoScope.setCwd(newCwd.getCanonicalFile());
-            } catch (IOException e) {
-                result = "change directory failed: " + e.getMessage();
-            }
-        } else
-            result = "change directory failed";
+            } else
+                result = "change directory failed";
+        } catch (IOException e) {
+            result = "change directory failed: " + e.getMessage();
+        }
         return result;
     }
 
@@ -612,8 +623,7 @@ public class MongoScope extends Global {
         boolean success = false;
         File newDir;
         try {
-            newDir = new File(Context
-                    .toString(args[0])).getCanonicalFile();
+            newDir = resolveFilePath((MongoScope)thisObj, Context.toString(args[0])).getCanonicalFile();
             success = newDir.mkdirs();
         } catch (IOException e) {
         }
@@ -634,10 +644,15 @@ public class MongoScope extends Global {
         else if (args.length > 1)
             Context.throwAsScriptRuntimeEx(new MongoScriptException(
                     "need to specify 1 argument to listFiles"));
-        else
-            path = new File(Context
-                    .toString(args[0]));
-        
+        else {
+            try {
+                path = resolveFilePath((MongoScope)thisObj, Context.toString(args[0]));
+            } catch (IOException e) {
+                Context.throwAsScriptRuntimeEx(new MongoScriptException(
+                        "listFiles: " + e.getMessage()));
+            }
+        }
+
         // mongo only checks if the path exists, so we will do the same here
         if (!path.exists())
             Context.throwAsScriptRuntimeEx(new MongoScriptException(
@@ -675,8 +690,9 @@ public class MongoScope extends Global {
             Function funObj) {
         assertSingleArgument(args);
         try {
-            return FileUtils.readFileToString(new File(Context
-                    .toString(args[0])).getAbsoluteFile());
+            File toRead = resolveFilePath((MongoScope) thisObj,
+                    Context.toString(args[0])).getAbsoluteFile();
+            return FileUtils.readFileToString(toRead);
         } catch (IOException e) {
             Context.throwAsScriptRuntimeEx(e);
             return Undefined.instance;
@@ -689,7 +705,8 @@ public class MongoScope extends Global {
         boolean success = false;
         File toRemove;
         try {
-            toRemove = new File(Context.toString(args[0])).getCanonicalFile();
+            toRemove = resolveFilePath((MongoScope) thisObj,
+                    Context.toString(args[0])).getCanonicalFile();
             success = FileUtils.deleteQuietly(toRemove);
         } catch (IOException e) {
         }
@@ -707,7 +724,8 @@ public class MongoScope extends Global {
         }
         File inFile;
         try {
-            inFile = new File(Context.toString(args[0])).getCanonicalFile();
+            inFile = resolveFilePath((MongoScope) thisObj,
+                    Context.toString(args[0])).getCanonicalFile();
         } catch (IOException e) {
             Context.throwAsScriptRuntimeEx(e);
             return null;
@@ -750,7 +768,8 @@ public class MongoScope extends Global {
                     "fuzzFile takes 2 arguments"));
         File fileToFuzz;
         try {
-            fileToFuzz = new File(Context.toString(args[0])).getCanonicalFile();
+            fileToFuzz = resolveFilePath((MongoScope) thisObj,
+                    Context.toString(args[0])).getCanonicalFile();
         } catch (IOException e) {
             Context.throwAsScriptRuntimeEx(new MongoScriptException(e));
             return null;
@@ -835,9 +854,9 @@ public class MongoScope extends Global {
     }
 
     private static Reader loadFile(MongoScope scope, String filePath)
-            throws FileNotFoundException {
+            throws IOException {
         Reader reader = null;
-        File file = new File(filePath);
+        File file = resolveFilePath(scope, filePath);
         reader = new BufferedReader(new InputStreamReader(new FileInputStream(
                 file)));
         return reader;
@@ -862,5 +881,17 @@ public class MongoScope extends Global {
                         + filename, e);
             }
         }
+    }
+
+    private static File resolveFilePath(MongoScope scope, String filePath)
+            throws IOException {
+        File resolvedFile = null;
+        if (scope != null)
+            resolvedFile = scope.getCurrentDirHandler().resolveFilePath(
+                    filePath);
+        else
+            throw new MongoRuntimeException(
+                    "resolveFilePath() called with a null MongoScope!");
+        return resolvedFile;
     }
 }
