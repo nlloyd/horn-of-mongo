@@ -91,6 +91,11 @@ This test does actually pass, however.
 
 ## Changelog
 
+### v1.2.2
+
+Added CurrentDirectoryHandler interface as a mechanism similar to PrintHandler, QuitHandler, etc. for providing custom handling of cwd operations as well as path resolution.
+Additional minor changes provided by [AquaFold](http://www.aquafold.com) applied.
+
 ### v1.2.1
 
 Fixed minor classloader issue.
