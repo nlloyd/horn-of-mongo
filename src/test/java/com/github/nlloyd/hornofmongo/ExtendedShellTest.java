@@ -89,7 +89,7 @@ public class ExtendedShellTest {
         List<Object> lsResult2 = (List<Object>) resultConverted2;
         File[] filesList2 = new File(testScope.getCwd(), "jstests").listFiles();
         for (File file : filesList2) {
-            String nameToCheck = "jstests/" + file.getName();
+            String nameToCheck = "./jstests/" + file.getName();
             if (file.isDirectory())
                 nameToCheck += "/";
             assertTrue("name not found: " + nameToCheck,
@@ -205,7 +205,7 @@ public class ExtendedShellTest {
         }
         File[] filesList2 = new File(testScope.getCwd(), "jstests").listFiles();
         for (File file : filesList2) {
-            String nameToCheck = "jstests/" + file.getName();
+            String nameToCheck = "./jstests/" + file.getName();
             assertTrue("name not found: " + nameToCheck,
                     namesToData2.containsKey(nameToCheck));
             if (!(Boolean) namesToData2.get(nameToCheck).get("isDirectory"))
@@ -271,7 +271,7 @@ public class ExtendedShellTest {
         // generated against the file made above using the official shell
         final String md5sumExpected = "e51f6d6e9dda063436a59df30b17856e";
 
-        String md5sumActual = (String) MongoScope.md5sumFile(null, null,
+        String md5sumActual = (String) MongoScope.md5sumFile(null, testScope,
                 new Object[] { dummyFile.getAbsolutePath() }, null);
         assertEquals(md5sumExpected, md5sumActual);
 
@@ -296,7 +296,7 @@ public class ExtendedShellTest {
         writer.write(fileContent);
         writer.close();
 
-        MongoScope.fuzzFile(null, null,
+        MongoScope.fuzzFile(null, testScope,
                 new Object[] { dummyFile.getAbsolutePath(), byteToFuzz }, null);
 
         BufferedReader reader = new BufferedReader(new FileReader(dummyFile));

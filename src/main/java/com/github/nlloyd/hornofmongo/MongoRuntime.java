@@ -74,7 +74,7 @@ public class MongoRuntime {
                     "mongo client uri must have a database");
         MongoScope mongoScope = createMongoScope();
         mongoScope.setUseMongoShellWriteConcern(useMongoShellWriteConcern);
-        mongoScope.setMimicShellExceptionBehavior(mimicShellExceptionBehavior);
+        mongoScope.setStdoutMongoErrorMessages(mimicShellExceptionBehavior);
         
         StringBuilder connectStrBuilder = new StringBuilder("db = connect('");
 

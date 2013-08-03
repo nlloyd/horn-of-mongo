@@ -53,9 +53,9 @@ import com.mongodb.DBObject;
 import com.mongodb.MongoClientOptions;
 import com.mongodb.MongoClientURI;
 import com.mongodb.MongoException;
+import com.mongodb.MongoOptions;
 import com.mongodb.ServerAddress;
 import com.mongodb.WriteConcern;
-import com.mongodb.MongoOptions;
 
 /**
  * JavaScript host Mongo object that acts as an adaptor between the JavaScript
@@ -80,6 +80,7 @@ public class Mongo extends ScriptableMongoObject {
 
     protected List<ServerAddress> hosts;
 	protected MongoOptions mongoOptions;
+	protected int options;
 
     public Mongo() throws UnknownHostException {
         super();
@@ -96,6 +97,8 @@ public class Mongo extends ScriptableMongoObject {
             this.innerMongo = (com.mongodb.Mongo) host;
             this.hosts = this.innerMongo.getAllAddress();
             this.mongoOptions = this.innerMongo.getMongoOptions();
+            // now get the query options, not same as MongoOptions
+            this.options = this.innerMongo.getOptions();
         } else if (host instanceof List<?>)
             // TODO check if we get a list of ServerAddresses or something else
             this.hosts = (List<ServerAddress>) host;
@@ -149,6 +152,8 @@ public class Mongo extends ScriptableMongoObject {
 			        .dbEncoderFactory(HornOfMongoBSONEncoder.FACTORY).build();
 	        this.innerMongo = new com.mongodb.MongoClient(this.hosts,
                     clientOptions);
+	        if(options != 0)
+	            this.innerMongo.setOptions(options);
         }
         if (mongoScope.useMongoShellWriteConcern())
             innerMongo.setWriteConcern(WriteConcern.UNACKNOWLEDGED);
@@ -212,6 +217,8 @@ public class Mongo extends ScriptableMongoObject {
         String collectionName = ns.substring(ns.indexOf('.') + 1);
         if ("$cmd".equals(collectionName)) {
             try {
+                if(options == 0)
+                    options = innerMongo.getOptions();
                 CommandResult cmdResult = db.command(bsonQuery, options,
                         HornOfMongoBSONEncoder.FACTORY.create());
                 handlePostCommandActions(db, bsonQuery);
@@ -236,8 +243,19 @@ public class Mongo extends ScriptableMongoObject {
             DBCollection collection = db.getCollection(collectionName);
             collection.setDBEncoderFactory(HornOfMongoBSONEncoder.FACTORY);
             collection.setDBDecoderFactory(HornOfMongoBSONDecoder.FACTORY);
+            DBObject specialFields = null;
+            if(bsonQuery.get("query") instanceof DBObject) {
+                specialFields = bsonQuery;
+                bsonQuery = (DBObject)bsonQuery.get("query");
+            }
             DBCursor cursor = collection.find(bsonQuery, bsonFields).skip(skip)
                     .batchSize(batchSize).limit(limit).addOption(options);
+            if(specialFields != null) {
+                for(String key : specialFields.keySet()) {
+                    if(!"query".equals(key))
+                        cursor.addSpecial(key, specialFields.get(key));
+                }
+            }
             InternalCursor jsCursor = (InternalCursor) MongoRuntime
                     .call(new NewInstanceAction(mongoScope, "InternalCursor",
                             new Object[] { cursor }));
@@ -362,8 +380,10 @@ public class Mongo extends ScriptableMongoObject {
             db = innerMongo.getDB(bsonAuth.get("userSource").toString());
         }
 
-        db.authenticateCommand(bsonAuth.get("user").toString(),
-                bsonAuth.get("pwd").toString().toCharArray());
+        Object user = bsonAuth.get("user");
+        Object pwd = bsonAuth.get("pwd");
+        db.authenticateCommand((user == null ? null : user.toString()),
+                (pwd == null ? null : pwd.toString().toCharArray()));
     }
 
     /**
@@ -375,7 +395,7 @@ public class Mongo extends ScriptableMongoObject {
     @JSFunction
     public Object logout(final String dbName) {
         DB db = innerMongo.getDB(dbName);
-        CommandResult result = db.command(new BasicDBObject("logout", 1));
+        CommandResult result = db.command(new BasicDBObject("logout", 1), innerMongo.getOptions());
         return BSONizer.convertBSONtoJS(mongoScope, result);
     }
 
@@ -397,5 +417,5 @@ public class Mongo extends ScriptableMongoObject {
             mongoScope = (MongoScope) ScriptableObject.getTopLevelScope(this);
         mongoScope.handleMongoException(me);
     }
-
+    
 }

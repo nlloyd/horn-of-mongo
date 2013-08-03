@@ -154,6 +154,7 @@ public class JSTest {
             @Override
             public boolean accept(File dir, String name) {
                 return !name.startsWith("_") && name.endsWith(".js")
+                        && name.startsWith("fsync2.")
                         && !excludedTests.contains(name);
             }
 
@@ -234,7 +235,7 @@ public class JSTest {
         // set the exception handling behavior of the test runtime to mimic the
         // official mongo shell client
         testScope.setUseMongoShellWriteConcern(true);
-        testScope.setMimicShellExceptionBehavior(true);
+        testScope.setStdoutMongoErrorMessages(true);
     }
 
     @AfterClass

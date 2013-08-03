@@ -115,6 +115,13 @@ First release!  Highly compatible release with mongodb version 2.4.3 (see Known 
 [Planned Milestones](https://github.com/nlloyd/horn-of-mongo/issues/milestones)<br/>
 [Issues](https://github.com/nlloyd/horn-of-mongo/issues?labels=&milestone=&page=1&state=open)
 
+## Support
+
+Have a feature idea that you want to discuss? [Bring it up here](https://groups.google.com/forum/?fromgroups#!forum/horn-of-mongo)
+Have a question about a feature? [Bring it up here](https://groups.google.com/forum/?fromgroups#!forum/horn-of-mongo)
+Have a bug you want to report? [Bring it up here](https://groups.google.com/forum/#!forum/horn-of-mongo)
+Want to hear about the latest that is happening on this project? [Read about it here!](https://groups.google.com/forum/?fromgroups#!forum/horn-of-mongo)
+
 ## Contributors
 
 <a href="http://www.aquafold.com"><img src="http://www.aquafold.com/images/s_aquadatastudio_130x34.gif" /></a>  AquaFold, patch contributors, horn-of-mongo is the core engine behind the MongoDB features in their upcoming release.
