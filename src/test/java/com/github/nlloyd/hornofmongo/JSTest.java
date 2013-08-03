@@ -154,7 +154,6 @@ public class JSTest {
             @Override
             public boolean accept(File dir, String name) {
                 return !name.startsWith("_") && name.endsWith(".js")
-                        && name.startsWith("fsync2.")
                         && !excludedTests.contains(name);
             }
 
