@@ -144,8 +144,7 @@ public class MongoScope extends Global {
     private boolean stdoutMongoErrorMessages = false;
 
     /**
-     * {@link http
-     * ://docs.mongodb.org/manual/release-notes/drivers-write-concern/}
+     * {@link http://docs.mongodb.org/manual/release-notes/drivers-write-concern/}
      * 
      * Default write concern has changed for all official mongo drivers, which
      * differs from the default mongo shell behavior. Set this flag to true
@@ -301,7 +300,7 @@ public class MongoScope extends Global {
                 "_rand", "UUID", "MD5", "HexData", "print", "ls", "cd",
                 "mkdir", "pwd", "listFiles", "hostname", "cat", "removeFile",
                 "md5sumFile", "fuzzFile", "run", "runProgram", "getMemInfo",
-                "load" };
+                "load", "getHostName" };
         defineFunctionProperties(names, this.getClass(),
                 ScriptableObject.DONTENUM);
         ScriptableObject objectPrototype = (ScriptableObject) ScriptableObject
@@ -452,7 +451,7 @@ public class MongoScope extends Global {
         return size;
     }
 
-    public static final BinData UUID(Context cx, Scriptable thisObj,
+    public static BinData UUID(Context cx, Scriptable thisObj,
             Object[] args, Function funObj) {
         if (args.length != 1)
             Context.throwAsScriptRuntimeEx(new MongoScriptException(
@@ -468,7 +467,7 @@ public class MongoScope extends Global {
         return uuid;
     }
 
-    public static final BinData MD5(Context cx, Scriptable thisObj,
+    public static BinData MD5(Context cx, Scriptable thisObj,
             Object[] args, Function funObj) {
         if (args.length != 1)
             Context.throwAsScriptRuntimeEx(new MongoScriptException(
@@ -484,7 +483,7 @@ public class MongoScope extends Global {
         return md5;
     }
 
-    public static final BinData HexData(Context cx, Scriptable thisObj,
+    public static BinData HexData(Context cx, Scriptable thisObj,
             Object[] args, Function funObj) {
         if (args.length != 2)
             Context.throwAsScriptRuntimeEx(new MongoScriptException(
@@ -686,6 +685,11 @@ public class MongoScope extends Global {
         }
     }
 
+    public static Object getHostName(Context cx, Scriptable thisObj,
+            Object[] args, Function funObj) {
+        return hostname(cx, thisObj, args, funObj);
+    }
+
     public static Object cat(Context cx, Scriptable thisObj, Object[] args,
             Function funObj) {
         assertSingleArgument(args);
@@ -818,12 +822,24 @@ public class MongoScope extends Global {
 
     public static Object getMemInfo(Context cx, Scriptable thisObj,
             Object[] args, Function funObj) {
-        return "getMemInfo() not supported";
+        Scriptable memInfo = (Scriptable) MongoRuntime.call(new NewInstanceAction(
+                (MongoScope)thisObj, "Object"));
+
+        Runtime runtime = Runtime.getRuntime();
+        long freeMemory = runtime.freeMemory();
+        long totalMemory = runtime.totalMemory();
+        long maxMemory = runtime.maxMemory();
+
+        ScriptableObject.putProperty(memInfo, "used", ((totalMemory - freeMemory) / 1024 / 1024));
+        ScriptableObject.putProperty(memInfo, "total", (totalMemory / 1024 / 1024));
+        ScriptableObject.putProperty(memInfo, "max", (maxMemory / 1024 / 1024));
+
+        return memInfo;
     }
 
     // *** ******************** ***
 
-    public static final void assertSingleArgument(final Object[] args) {
+    public static void assertSingleArgument(final Object[] args) {
         if (args.length != 1)
             Context.throwAsScriptRuntimeEx(new MongoScriptException(
                     "need to specify 1 argument"));

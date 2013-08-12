@@ -21,31 +21,24 @@
  */
 package com.github.nlloyd.hornofmongo;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import com.github.nlloyd.hornofmongo.action.MongoScriptAction;
+import com.github.nlloyd.hornofmongo.util.BSONizer;
+import org.apache.commons.io.FileUtils;
+import org.bson.BSONObject;
+import org.junit.Before;
+import org.junit.Test;
+import org.mozilla.javascript.Context;
+import org.mozilla.javascript.ScriptableObject;
+import org.mozilla.javascript.WrappedException;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.io.FileUtils;
-import org.bson.BSONObject;
-import org.junit.Before;
-import org.junit.Test;
-import org.mozilla.javascript.Context;
-import org.mozilla.javascript.WrappedException;
-
-import com.github.nlloyd.hornofmongo.action.MongoScriptAction;
-import com.github.nlloyd.hornofmongo.util.BSONizer;
+import static org.junit.Assert.*;
 
 /**
  * @author nlloyd
@@ -331,9 +324,13 @@ public class ExtendedShellTest {
 
     @Test
     public void test_getMemInfo() {
-        String result = (String) MongoRuntime.call(new MongoScriptAction(
+        Object result = MongoRuntime.call(new MongoScriptAction(
                 testScope, "getMemInfo();"));
-        assertTrue(result.contains("not supported"));
+        assertTrue(result instanceof ScriptableObject);
+        ScriptableObject jsResult = (ScriptableObject)result;
+        assertTrue(ScriptableObject.hasProperty(jsResult, "used"));
+        assertTrue(ScriptableObject.hasProperty(jsResult, "total"));
+        assertTrue(ScriptableObject.hasProperty(jsResult, "max"));
     }
 
 }
