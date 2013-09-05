@@ -299,6 +299,7 @@ public class Mongo extends ScriptableMongoObject {
                 callInsert(collection, insertObj, false);
                 collection.setOptions(oldOptions);
             }
+            saveLastCalledDB(db);
         } catch (MongoException me) {
             handleMongoException(me);
         }
@@ -318,6 +319,7 @@ public class Mongo extends ScriptableMongoObject {
 
         try {
             collection.remove(bsonPattern);
+            saveLastCalledDB(db);
         } catch (MongoException me) {
             handleMongoException(me);
         }
@@ -345,6 +347,7 @@ public class Mongo extends ScriptableMongoObject {
 
         try {
             collection.update(bsonQuery, bsonObj, upsertOp, multiOp);
+            saveLastCalledDB(db);
         } catch (MongoException me) {
             handleMongoException(me);
         }
@@ -416,6 +419,12 @@ public class Mongo extends ScriptableMongoObject {
         if (mongoScope == null)
             mongoScope = (MongoScope) ScriptableObject.getTopLevelScope(this);
         mongoScope.handleMongoException(me);
+    }
+
+    private void saveLastCalledDB(com.mongodb.DB lastCalledDB) {
+        if(mongoScope == null)
+            mongoScope = (MongoScope)ScriptableObject.getTopLevelScope(this);
+        mongoScope.setLastCalledDB(lastCalledDB);
     }
     
 }

@@ -132,6 +132,8 @@ public class MongoScope extends Global {
 
     private QuitHandler quitHandler;
 
+    private com.mongodb.DB lastCalledDB;
+
     /**
      * If true then some {@link MongoException} will be caught and the messages
      * will be printed to stdout depending on behavior of the official mongodb
@@ -254,6 +256,22 @@ public class MongoScope extends Global {
      */
     public void setQuitHandler(QuitHandler quitHandler) {
         this.quitHandler = quitHandler;
+    }
+
+    /**
+     *
+     * @return the last called/queried/used {@link com.mongodb.DB}
+     */
+    public com.mongodb.DB getLastCalledDB() {
+        return lastCalledDB;
+    }
+
+    /**
+     * Set the last called/queries/used {@link com.mongodb.DB}
+     * @param lastCalledDB the {@link com.mongodb.DB} to set
+     */
+    public void setLastCalledDB(com.mongodb.DB lastCalledDB) {
+        this.lastCalledDB = lastCalledDB;
     }
 
     /**
