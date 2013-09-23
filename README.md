@@ -4,7 +4,7 @@ Horn of Mongo
 
 MongoDB Shell built on the Rhino JavaScript Engine for Java.
 
-Currently tested against mongodb release: <strong>2.4.5</strong>
+Currently tested against mongodb release: <strong>2.4.6</strong>
 
 ## Usage
 
@@ -90,6 +90,13 @@ This test does actually pass, however.
 **_shellspawn.js_**, and **_updatef.js_** are excluded because they rely on the following functions `startMongoProgramNoConnect()` and `startParallelShell()` which there are no plans to implement
 
 ## Changelog
+
+### v1.3
+
+Updated and tested against mongodb version 2.4.6
+Upgraded to use mongo-java-driver 2.11.3
+Applied patch from AquaFold Inc. that stores a reference to the DB instance after each API query for later getLastError() checks
+
 
 ### v1.2.1
 

@@ -1,16 +1,16 @@
 /**
  *  Copyright (c) 2013 Nick Lloyd
- *  
+ *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy
  *  of this software and associated documentation files (the "Software"), to deal
  *  in the Software without restriction, including without limitation the rights
  *  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  *  copies of the Software, and to permit persons to whom the Software is
  *  furnished to do so, subject to the following conditions:
- *  
+ *
  *  The above copyright notice and this permission notice shall be included in
  *  all copies or substantial portions of the Software.
- *  
+ *
  *  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  *  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  *  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -59,49 +59,49 @@ import de.flapdoodle.embed.process.runtime.ICommandLinePostProcessor;
 
 /**
  * @author nlloyd
- * 
+ *
  */
 @RunWith(Parameterized.class)
 public class JSTest {
 
-    private static final String MONGOD_VERSION = "2.4.5";
+    private static final String MONGOD_VERSION = "2.4.6";
 
     private static File cwd = null;
 
     /**
      * Tests containing currently unsupported/unimplemented official mongodb
      * shell features such as:
-     * 
+     *
      * startMongoProgramNoConnect() startParallelShell()
-     * 
+     *
      * run_program1.js is excluded due to the currently unsupported runProgram()
      * function.
-     * 
+     *
      * mr_noscripting.js and logpath.js are excluded due to the currently
      * unsupported MongoRunner js class.
-     * 
+     *
      * evalf.js is excluded due to a locking issue that has yet to be resolved
      * however the complexity of the test scenario makes this a safe-to-exclude
      * for now.
-     * 
+     *
      * indexOtherNamespace.js excluded because I can't for the life of me get
      * the failure scenario to actually fail using the mongo java driver :-(
-     * 
+     *
      * memory.js is excluded because it is testing the mongod rather than the
      * client api behavior (and it takes a while to run on slower machines).
      * This test does actually pass, however.
-     * 
+     *
      * remove_justone.js excluded until the mongo java driver supports that
      * feature: https://jira.mongodb.org/browse/JAVA-759
      *
      * dbref3.js excluded until mongo java driver follows the DBRef spec,
      * currently only a naive check for $ref and $id fields is made which is
-     * incorrect 
-     * jira issue for tracking: 
-     * 
+     * incorrect
+     * jira issue for tracking:
+     *
      */
     public static final List<String> excludedTests = Arrays
-            .asList(new String[] { "basicc.js", "bench_test1.js",
+            .asList("basicc.js", "bench_test1.js",
                     "bench_test2.js", "bench_test3.js",
                     "connections_opened.js", "count8.js", "coveredIndex3.js",
                     "currentop.js", "cursora.js", "distinct3.js", "drop2.js",
@@ -113,17 +113,17 @@ public class JSTest {
                     "queryoptimizer5.js", "remove9.js", "removeb.js",
                     "removec.js", "shellkillop.js", "shellstartparallel.js",
                     "shellspawn.js", "updatef.js", "run_program1.js",
-                    "indexOtherNamespace.js", "remove_justone.js", "dbref3.js" });
+                    "indexOtherNamespace.js", "remove_justone.js", "dbref3.js");
 
     /**
      * Tests that throw an expected exception (whether by design or observed but
      * not invalid behavior).
-     * 
+     *
      * numberint.js is a special case since there IS a fix for
      */
     public static final List<String> expectedExceptionTests = Arrays
-            .asList(new String[] { "basicb.js", "update_arraymatch3.js",
-                    "numberint.js" });
+            .asList("basicb.js", "update_arraymatch3.js",
+                    "numberint.js");
 
     public static Map<String, Class<? extends Throwable>> expectedExceptionTypes = new Hashtable<String, Class<? extends Throwable>>();
     public static Map<String, String> expectedExceptionMessages = new Hashtable<String, String>();
@@ -189,7 +189,7 @@ public class JSTest {
     private static MongodExecutable mongodExec;
     private static MongodProcess mongod;
 
-    public JSTest(String jsTestFileName, File jsTestFile) {
+    public JSTest(final String jsTestFileName, final File jsTestFile) {
         this.jsTestFile = jsTestFile;
     }
 

@@ -1,16 +1,16 @@
 /**
  *  Copyright (c) 2012 Nick Lloyd
- *  
+ *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy
  *  of this software and associated documentation files (the "Software"), to deal
  *  in the Software without restriction, including without limitation the rights
  *  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  *  copies of the Software, and to permit persons to whom the Software is
  *  furnished to do so, subject to the following conditions:
- *  
+ *
  *  The above copyright notice and this permission notice shall be included in
  *  all copies or substantial portions of the Software.
- *  
+ *
  *  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  *  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  *  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -97,17 +97,17 @@ import com.mongodb.util.Util;
  * The MongoDB-specific {@link Scope} implementation. This extends
  * {@link Global} to add MongoDB shell JavaScript global functions objects, and
  * variables.
- * 
+ *
  * Meant to emulate engine.cpp (and the more specific engine_*.cpp
  * implementations) in the official mongodb source.
- * 
+ *
  * @author nlloyd
- * 
+ *
  */
 public class MongoScope extends Global {
 
     /**
-	 * 
+	 *
 	 */
     private static final long serialVersionUID = 4650743395507077775L;
 
@@ -138,16 +138,16 @@ public class MongoScope extends Global {
      * If true then some {@link MongoException} will be caught and the messages
      * will be printed to stdout depending on behavior of the official mongodb
      * client shell. If false then the exceptions will be rethrown.
-     * 
+     *
      * Defaults to false.
-     * 
+     *
      * Meant to support the same behavior as the official mongodb shell client.
      */
     private boolean stdoutMongoErrorMessages = false;
 
     /**
      * {@link http://docs.mongodb.org/manual/release-notes/drivers-write-concern/}
-     * 
+     *
      * Default write concern has changed for all official mongo drivers, which
      * differs from the default mongo shell behavior. Set this flag to true
      * configure this MongoScope to behave like mongo shell as opposed to mongo
@@ -452,16 +452,13 @@ public class MongoScope extends Global {
         return threadLocalRandomGen.get().nextDouble();
     }
 
-    private static final DBEncoder bsonEncoder = DefaultDBEncoder.FACTORY
-            .create();
-
     public static Long bsonsize(Context cx, Scriptable thisObj, Object[] args,
             Function funObj) throws IOException {
         DBObject bsonObj = (DBObject) BSONizer.convertJStoBSON(args[0], true);
         Long size = new Long(0);
         if (bsonObj != null) {
             BasicOutputBuffer byteBuffer = new BasicOutputBuffer();
-            bsonEncoder.writeObject(byteBuffer, bsonObj);
+            DefaultDBEncoder.FACTORY.create().writeObject(byteBuffer, bsonObj);
             ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
             byteBuffer.pipe(byteStream);
             size = new Long(byteStream.size());
@@ -541,7 +538,7 @@ public class MongoScope extends Global {
 
     /**
      * Call the {@link ClearHandler} or noop.
-     * 
+     *
      * @param cx
      * @param thisObj
      * @param args
@@ -898,9 +895,9 @@ public class MongoScope extends Global {
 
     /**
      * Load and execute a set of JavaScript source files.
-     * 
+     *
      * Overrides Global.load()
-     * 
+     *
      */
     public static void load(Context cx, Scriptable thisObj, Object[] args,
             Function funObj) {
