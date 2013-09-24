@@ -95,8 +95,12 @@ This test does actually pass, however.
 
 Updated and tested against mongodb version 2.4.6
 Upgraded to use mongo-java-driver 2.11.3
-Applied patch from AquaFold Inc. that stores a reference to the DB instance after each API query for later getLastError() checks
+Applied patch from [AquaFold](http://www.aquafold.com) that stores a reference to the DB instance after each API query for later getLastError() checks
 
+### v1.2.2
+
+Added CurrentDirectoryHandler interface as a mechanism similar to PrintHandler, QuitHandler, etc. for providing custom handling of cwd operations as well as path resolution.
+Additional minor changes provided by [AquaFold](http://www.aquafold.com) applied.
 
 ### v1.2.1
 
